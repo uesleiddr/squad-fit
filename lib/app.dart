@@ -11,8 +11,7 @@ class SquadFitApp extends StatelessWidget {
       title: 'SquadFit',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
       home: const HomeScreen(),
     );
   }
