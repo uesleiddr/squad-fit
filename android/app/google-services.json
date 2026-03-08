@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "489573537640",
+    "project_id": "squadfit-2026",
+    "storage_bucket": "squadfit-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:489573537640:android:e374e919539e0139aa68dd",
+        "android_client_info": {
+          "package_name": "com.squadfit.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBL3uRXI11BFOHhPxN840i_3rDs52oV0RA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
