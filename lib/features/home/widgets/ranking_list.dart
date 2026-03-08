@@ -20,7 +20,7 @@ class RankingList extends StatelessWidget {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: rankings.length,
-        separatorBuilder: (context, index) => const Divider(height: 1, indent: 72),
+        separatorBuilder: (context, index) => const Divider(height: 1, indent: 72, color: Colors.black26),
         itemBuilder: (context, index) {
           final ranking = rankings[index];
           return _RankingTile(data: ranking);

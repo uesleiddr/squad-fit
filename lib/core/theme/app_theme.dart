@@ -8,8 +8,8 @@ class AppTheme {
 
   // Cores de superfície (tema claro)
   static const Color backgroundColor = Colors.white; // Fundo branco
-  static const Color surfaceColor = Color(0xFF424242); // Cards chumbo
-  static const Color surfaceContainerColor = Color(0xFF616161);
+  static const Color surfaceColor = Color(0xFFE0E0E0); // Cards cinza bem claro
+  static const Color surfaceContainerColor = Color(0xFFEEEEEE);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -19,13 +19,13 @@ class AppTheme {
       primary: primaryColor,
       onPrimary: Colors.white,
       primaryContainer: surfaceColor,
-      onPrimaryContainer: Colors.white,
+      onPrimaryContainer: Color(0xFF1A1A1A),
       secondary: secondaryColor,
       onSecondary: Colors.white,
       secondaryContainer: Color(0xFFC8E6C9),
       onSecondaryContainer: Color(0xFF1B5E20),
       surface: surfaceColor,
-      onSurface: Colors.white, // Texto branco nos cards chumbo
+      onSurface: Color(0xFF1A1A1A), // Texto preto nos cards claros
       surfaceContainerHighest: surfaceContainerColor,
       error: errorColor,
       onError: Colors.white,
@@ -34,7 +34,9 @@ class AppTheme {
     appBarTheme: const AppBarTheme(
       centerTitle: true,
       elevation: 0,
+      scrolledUnderElevation: 0,
       backgroundColor: backgroundColor,
+      surfaceTintColor: Colors.transparent,
       foregroundColor: primaryColor,
     ),
     cardTheme: CardThemeData(
@@ -43,7 +45,7 @@ class AppTheme {
       shadowColor: Colors.black.withValues(alpha: 0.5),
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(6),
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
