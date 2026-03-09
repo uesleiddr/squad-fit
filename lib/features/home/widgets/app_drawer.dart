@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../auth/services/auth_service.dart';
 
 class AppDrawer extends StatelessWidget {
   final VoidCallback? onClose;
@@ -13,8 +15,17 @@ class AppDrawer extends StatelessWidget {
     }
   }
 
+  Future<void> _handleSignOut() async {
+    await AuthService().signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final userName = user?.displayName ?? 'Usuario';
+    final userEmail = user?.email ?? '';
+    final userPhoto = user?.photoURL;
+
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -31,21 +42,20 @@ class AppDrawer extends StatelessWidget {
                   CircleAvatar(
                     radius: 32,
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: const Icon(
-                      Icons.person,
-                      size: 32,
-                      color: Colors.white,
-                    ),
+                    backgroundImage: userPhoto != null ? NetworkImage(userPhoto) : null,
+                    child: userPhoto == null
+                        ? const Icon(Icons.person, size: 32, color: Colors.white)
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'João Silva',
+                    userName,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                   Text(
-                    'joao@email.com',
+                    userEmail,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -88,7 +98,7 @@ class AppDrawer extends StatelessWidget {
               icon: Icons.logout_outlined,
               selectedIcon: Icons.logout,
               title: 'Sair',
-              onTap: () => _handleTap(context),
+              onTap: () => _handleSignOut(),
             ),
           ],
         ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
-import 'features/home/screens/home_screen.dart';
+import 'features/auth/screens/auth_wrapper.dart';
 
 class SquadFitApp extends StatelessWidget {
   const SquadFitApp({super.key});
@@ -12,7 +12,7 @@ class SquadFitApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       themeMode: ThemeMode.light,
-      home: const HomeScreen(),
+      home: const AuthWrapper(),
     );
   }
 }
