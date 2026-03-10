@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../auth/services/auth_service.dart';
+import '../../weight/screens/add_weight_screen.dart';
+import '../../weight/screens/weight_history_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final VoidCallback? onClose;
@@ -70,6 +72,18 @@ class AppDrawer extends StatelessWidget {
               onTap: () => _handleTap(context),
             ),
             _DrawerItem(
+              icon: Icons.monitor_weight_outlined,
+              selectedIcon: Icons.monitor_weight,
+              title: 'Registrar Peso',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddWeightScreen()),
+                );
+              },
+            ),
+            _DrawerItem(
               icon: Icons.emoji_events_outlined,
               selectedIcon: Icons.emoji_events,
               title: 'Competições',
@@ -79,7 +93,13 @@ class AppDrawer extends StatelessWidget {
               icon: Icons.history_outlined,
               selectedIcon: Icons.history,
               title: 'Histórico de Peso',
-              onTap: () => _handleTap(context),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
+                );
+              },
             ),
             _DrawerItem(
               icon: Icons.leaderboard_outlined,
