@@ -26,6 +26,7 @@ class CompetitionService {
     String? description,
     required DateTime startDate,
     required DateTime endDate,
+    required VictoryRule victoryRule,
   }) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
@@ -44,6 +45,7 @@ class CompetitionService {
       startDate: startDate,
       endDate: endDate,
       inviteCode: inviteCode,
+      victoryRule: victoryRule,
       createdAt: now,
       updatedAt: now,
     );
@@ -288,5 +290,41 @@ class CompetitionService {
 
     final competition = await getCompetitionById(competitionId);
     return competition?.adminId == authUser.uid;
+  }
+
+  /// Verifica se o usuário atual é admin (versão síncrona usando o uid)
+  bool isCurrentUserAdmin(String adminId) {
+    final authUser = _auth.currentUser;
+    if (authUser == null) return false;
+    return authUser.uid == adminId;
+  }
+
+  /// Exclui uma competição (apenas admin)
+  Future<void> deleteCompetition(String competitionId) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) {
+      throw Exception('Usuario nao autenticado');
+    }
+
+    final competition = await getCompetitionById(competitionId);
+    if (competition == null) {
+      throw Exception('Competicao nao encontrada');
+    }
+
+    if (competition.adminId != authUser.uid) {
+      throw Exception('Apenas o administrador pode excluir a competicao');
+    }
+
+    // Remove todos os participantes
+    final participants = await _participantsCollection
+        .where('competitionId', isEqualTo: competitionId)
+        .get();
+
+    for (final doc in participants.docs) {
+      await _participantsCollection.doc(doc.id).delete();
+    }
+
+    // Remove a competição
+    await _competitionsCollection.doc(competitionId).delete();
   }
 }

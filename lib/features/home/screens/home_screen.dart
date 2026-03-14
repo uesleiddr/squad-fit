@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import '../../../core/utils/responsive.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/user_stats_card.dart';
 import '../widgets/ranking_list.dart';
@@ -75,12 +76,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
           child: SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            padding: context.screenPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const UserStatsCard(),
-                const SizedBox(height: 6),
+                SizedBox(height: context.cardSpacing),
                 const RankingList(),
                 const SizedBox(height: 80),
               ],

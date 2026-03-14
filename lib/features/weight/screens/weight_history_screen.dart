@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/weight_record_model.dart';
 import '../../../core/services/weight_service.dart';
+import '../../../core/utils/responsive.dart';
 import 'add_weight_screen.dart';
 
 class WeightHistoryScreen extends StatefulWidget {
@@ -145,7 +146,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: context.screenPadding,
             itemCount: records.length,
             itemBuilder: (context, index) {
               final record = records[index];
@@ -220,18 +221,26 @@ class _WeightCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${record.weight.toStringAsFixed(1)} kg',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${record.weight.toStringAsFixed(1)} kg',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    formatDate(record.date),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formatDate(record.date),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ),
                 ],
