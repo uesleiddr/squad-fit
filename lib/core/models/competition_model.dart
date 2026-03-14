@@ -1,5 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Regra de vitória da competição
+enum VictoryRule {
+  /// Vence quem perder mais peso em kg
+  totalWeightLoss,
+  /// Vence quem perder maior percentual de peso
+  percentageLoss,
+}
+
 class CompetitionModel {
   final String id;
   final String name;
@@ -8,6 +16,7 @@ class CompetitionModel {
   final DateTime startDate;
   final DateTime endDate;
   final String inviteCode;
+  final VictoryRule victoryRule;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +28,7 @@ class CompetitionModel {
     required this.startDate,
     required this.endDate,
     required this.inviteCode,
+    required this.victoryRule,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -42,6 +52,10 @@ class CompetitionModel {
       startDate: (data['startDate'] as Timestamp).toDate(),
       endDate: (data['endDate'] as Timestamp).toDate(),
       inviteCode: data['inviteCode'] ?? '',
+      victoryRule: VictoryRule.values.firstWhere(
+        (e) => e.name == data['victoryRule'],
+        orElse: () => VictoryRule.totalWeightLoss,
+      ),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -55,6 +69,7 @@ class CompetitionModel {
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
       'inviteCode': inviteCode,
+      'victoryRule': victoryRule.name,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -68,6 +83,7 @@ class CompetitionModel {
     DateTime? startDate,
     DateTime? endDate,
     String? inviteCode,
+    VictoryRule? victoryRule,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -79,6 +95,7 @@ class CompetitionModel {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       inviteCode: inviteCode ?? this.inviteCode,
+      victoryRule: victoryRule ?? this.victoryRule,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

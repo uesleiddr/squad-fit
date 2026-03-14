@@ -58,11 +58,17 @@ class _RankingTile extends StatelessWidget {
       leading: _buildPositionBadge(context),
       title: Row(
         children: [
-          Text(
-            data.name,
-            style: TextStyle(
-              fontWeight: data.isCurrentUser ? FontWeight.bold : FontWeight.normal,
-              color: colorScheme.onSurface,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                data.name,
+                style: TextStyle(
+                  fontWeight: data.isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                  color: colorScheme.onSurface,
+                ),
+              ),
             ),
           ),
           if (data.isCurrentUser) ...[

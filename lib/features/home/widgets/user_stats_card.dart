@@ -30,18 +30,26 @@ class UserStatsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Olá, João!',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Olá, João!',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
                       ),
-                      Text(
-                        'Competição: Desafio Verão 2026',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onPrimaryContainer
-                                  .withValues(alpha: 0.7),
-                            ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Competição: Desafio Verão 2026',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onPrimaryContainer
+                                    .withValues(alpha: 0.7),
+                              ),
+                        ),
                       ),
                     ],
                   ),
@@ -120,15 +128,21 @@ class _StatItem extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ),
       ],
     );

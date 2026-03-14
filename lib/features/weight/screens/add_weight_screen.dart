@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/weight_service.dart';
+import '../../../core/utils/responsive.dart';
 
 class AddWeightScreen extends StatefulWidget {
   const AddWeightScreen({super.key});
@@ -102,7 +103,7 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: context.screenPadding,
           child: Form(
             key: _formKey,
             child: Column(

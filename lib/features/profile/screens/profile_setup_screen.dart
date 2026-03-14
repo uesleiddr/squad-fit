@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/services/user_service.dart';
+import '../../../core/utils/responsive.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -118,7 +119,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: context.screenPadding,
           child: Form(
             key: _formKey,
             child: Column(
