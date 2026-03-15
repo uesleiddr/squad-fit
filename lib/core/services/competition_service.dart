@@ -295,6 +295,35 @@ class CompetitionService {
     }
   }
 
+  /// Arquiva uma competição encerrada (mantém no histórico)
+  Future<void> archiveCompetition(String competitionId) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) {
+      throw Exception('Usuario nao autenticado');
+    }
+
+    final competition = await getCompetitionById(competitionId);
+    if (competition == null) {
+      throw Exception('Competicao nao encontrada');
+    }
+
+    if (!competition.hasEnded) {
+      throw Exception('Apenas competicoes encerradas podem ser arquivadas');
+    }
+
+    final participantDoc = await _participantsCollection
+        .where('competitionId', isEqualTo: competitionId)
+        .where('userId', isEqualTo: authUser.uid)
+        .limit(1)
+        .get();
+
+    if (participantDoc.docs.isNotEmpty) {
+      await _participantsCollection.doc(participantDoc.docs.first.id).update({
+        'status': ParticipantStatus.archived.name,
+      });
+    }
+  }
+
   /// Verifica se o usuário é admin de uma competição
   Future<bool> isAdmin(String competitionId) async {
     final authUser = _auth.currentUser;

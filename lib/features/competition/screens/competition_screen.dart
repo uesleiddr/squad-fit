@@ -107,34 +107,140 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
     }
   }
 
+  Future<void> _showLeaveConfirmation(
+    BuildContext context,
+    CompetitionModel competition,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        title: const Row(
+          children: [
+            Icon(Icons.exit_to_app, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Sair do Desafio'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tem certeza que deseja sair deste desafio?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.emoji_events, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      competition.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Voce podera entrar novamente usando o codigo de convite.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await _competitionService.leaveCompetition(competition.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Voce saiu do desafio'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao sair: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<CompetitionModel>>(
       stream: _competitionService.getMyCompetitionsStream(),
       builder: (context, snapshot) {
         final competitions = snapshot.data ?? [];
+
+        // Prioriza competição ativa, mas mostra encerrada se não houver ativa
         final activeCompetition = competitions
             .where((c) => !c.hasEnded)
             .toList()
             .firstOrNull;
 
-        final isAdmin = activeCompetition != null &&
-            _competitionService.isCurrentUserAdmin(activeCompetition.adminId);
+        final endedCompetition = competitions
+            .where((c) => c.hasEnded)
+            .toList()
+            .firstOrNull;
+
+        final currentCompetition = activeCompetition ?? endedCompetition;
+
+        final isAdmin = currentCompetition != null &&
+            _competitionService.isCurrentUserAdmin(currentCompetition.adminId);
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Desafio'),
             actions: [
-              if (activeCompetition != null && isAdmin)
+              // Botão de sair só aparece para competição ativa e não-admin
+              if (activeCompetition != null && !isAdmin)
+                IconButton(
+                  icon: const Icon(Icons.exit_to_app),
+                  tooltip: 'Sair do desafio',
+                  onPressed: () =>
+                      _showLeaveConfirmation(context, activeCompetition),
+                ),
+              // Botão de excluir aparece para admin (ativa ou encerrada)
+              if (currentCompetition != null && isAdmin)
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
                   tooltip: 'Excluir desafio',
                   onPressed: () =>
-                      _showDeleteConfirmation(context, activeCompetition),
+                      _showDeleteConfirmation(context, currentCompetition),
                 ),
             ],
           ),
-          body: _buildBody(context, snapshot, activeCompetition),
+          body: _buildBody(context, snapshot, currentCompetition),
         );
       },
     );
@@ -350,6 +456,7 @@ class _CompetitionDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final daysRemaining = competition.endDate.difference(DateTime.now()).inDays;
+    final hasEnded = competition.hasEnded;
     final colorScheme = Theme.of(context).colorScheme;
 
     return SafeArea(
@@ -370,9 +477,9 @@ class _CompetitionDetails extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 24,
-                          backgroundColor: colorScheme.primary,
-                          child: const Icon(
-                            Icons.emoji_events,
+                          backgroundColor: hasEnded ? Colors.grey : colorScheme.primary,
+                          child: Icon(
+                            hasEnded ? Icons.flag : Icons.emoji_events,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -420,15 +527,19 @@ class _CompetitionDetails extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary.withValues(alpha: 0.1),
+                        color: hasEnded
+                            ? Colors.grey.withValues(alpha: 0.2)
+                            : colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        daysRemaining > 0
-                            ? '$daysRemaining dias restantes'
-                            : 'Encerra hoje!',
+                        hasEnded
+                            ? 'Encerrado'
+                            : daysRemaining > 0
+                                ? '$daysRemaining dias restantes'
+                                : 'Encerra hoje!',
                         style: TextStyle(
-                          color: colorScheme.primary,
+                          color: hasEnded ? Colors.grey : colorScheme.primary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -635,10 +746,11 @@ class _CreateCompetitionModalState extends State<_CreateCompetitionModal> {
   }
 
   Future<void> _selectEndDate() async {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
     final picked = await showDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime.now(),
+      firstDate: tomorrow,
       lastDate: DateTime.now().add(const Duration(days: 365)),
       helpText: 'Selecione a data de termino',
       cancelText: 'Cancelar',
@@ -659,6 +771,19 @@ class _CreateCompetitionModalState extends State<_CreateCompetitionModal> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selecione a data de termino'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Valida se a data é no futuro
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    if (_endDate!.isBefore(todayOnly) || _endDate!.isAtSameMomentAs(todayOnly)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A data de termino deve ser no futuro'),
           backgroundColor: Colors.red,
         ),
       );
