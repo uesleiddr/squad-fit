@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum ParticipantStatus { active, removed }
+enum ParticipantStatus {
+  active,    // Participando ativamente
+  removed,   // Saiu/foi removido (pode entrar novamente)
+  archived,  // Competição encerrada e arquivada (histórico)
+}
 
 class CompetitionParticipantModel {
   final String id;
