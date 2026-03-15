@@ -4,7 +4,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/services/deep_link_service.dart';
+import '../../../core/services/weight_service.dart';
+import '../../../core/services/user_service.dart';
 import '../../../core/utils/responsive.dart';
+import '../../home/widgets/ranking_list.dart';
 
 class CompetitionScreen extends StatefulWidget {
   const CompetitionScreen({super.key});
@@ -592,29 +595,10 @@ class _CompetitionDetails extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: context.cardSpacing),
 
-            // TODO: Adicionar ranking dos participantes
-            Text(
-              'Ranking',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Center(
-                child: Text(
-                  'Ranking sera exibido aqui',
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-              ),
-            ),
+            // Ranking dos participantes
+            RankingList(competition: competition),
           ],
         ),
       ),
@@ -1032,10 +1016,19 @@ class _JoinCompetitionModalState extends State<_JoinCompetitionModal> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Pegar o peso atual do usuário
+      // Busca o peso atual do usuário
+      final weightService = WeightService();
+      final userService = UserService();
+
+      final latestWeight = await weightService.getLatestWeight();
+      final user = await userService.getCurrentUser();
+
+      // Usa peso mais recente, ou peso inicial do perfil, ou 0
+      final currentWeight = latestWeight?.weight ?? user?.initialWeight ?? 0;
+
       await _competitionService.joinCompetitionByCode(
         code,
-        currentWeight: 0,
+        currentWeight: currentWeight,
       );
 
       if (mounted) {
