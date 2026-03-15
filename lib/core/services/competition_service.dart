@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/models.dart';
+import 'weight_service.dart';
+import 'user_service.dart';
 
 class CompetitionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -53,7 +56,16 @@ class CompetitionService {
     await docRef.set(competition.toFirestore());
 
     // Admin automaticamente entra como participante
-    await joinCompetition(competition.id, currentWeight: 0);
+    // Busca o peso atual do admin
+    final weightService = WeightService();
+    final userService = UserService();
+
+    final latestWeight = await weightService.getLatestWeight();
+    final user = await userService.getCurrentUser();
+
+    final currentWeight = latestWeight?.weight ?? user?.initialWeight ?? 0;
+
+    await joinCompetition(competition.id, currentWeight: currentWeight);
 
     return competition;
   }
@@ -297,6 +309,124 @@ class CompetitionService {
     final authUser = _auth.currentUser;
     if (authUser == null) return false;
     return authUser.uid == adminId;
+  }
+
+  /// Obtém o ranking de uma competição
+  /// Retorna lista ordenada por regra de vitória (porcentagem ou kg perdidos)
+  Future<List<RankingEntryModel>> getCompetitionRanking(
+    String competitionId,
+  ) async {
+    final authUser = _auth.currentUser;
+    final competition = await getCompetitionById(competitionId);
+    if (competition == null) return [];
+
+    final participants = await getCompetitionParticipants(competitionId);
+    if (participants.isEmpty) return [];
+
+    final weightService = WeightService();
+    final userService = UserService();
+
+    final List<RankingEntryModel> rankings = [];
+
+    for (final participant in participants) {
+      // Busca dados do usuário
+      final user = await userService.getUserById(participant.userId);
+      if (user == null) continue;
+
+      // Busca peso atual do participante
+      final latestWeight = await weightService.getLatestWeight(
+        userId: participant.userId,
+      );
+
+      final initialWeight = participant.initialWeight > 0
+          ? participant.initialWeight
+          : user.initialWeight ?? 0;
+
+      final currentWeight = latestWeight?.weight ?? initialWeight;
+
+      final weightLost = initialWeight - currentWeight;
+      final percentageLost = initialWeight > 0
+          ? (weightLost / initialWeight) * 100
+          : 0.0;
+
+      rankings.add(RankingEntryModel(
+        position: 0, // Será definido após ordenação
+        userId: participant.userId,
+        userName: '${user.firstName} ${user.lastName}'.trim(),
+        userPhotoUrl: user.photoUrl,
+        initialWeight: initialWeight,
+        currentWeight: currentWeight,
+        weightLost: weightLost,
+        percentageLost: percentageLost,
+        isCurrentUser: participant.userId == authUser?.uid,
+      ));
+    }
+
+    // Ordena pelo critério da competição
+    if (competition.victoryRule == VictoryRule.percentageLoss) {
+      rankings.sort((a, b) => b.percentageLost.compareTo(a.percentageLost));
+    } else {
+      rankings.sort((a, b) => b.weightLost.compareTo(a.weightLost));
+    }
+
+    // Define posições
+    final rankedList = <RankingEntryModel>[];
+    for (var i = 0; i < rankings.length; i++) {
+      final entry = rankings[i];
+      rankedList.add(RankingEntryModel(
+        position: i + 1,
+        userId: entry.userId,
+        userName: entry.userName,
+        userPhotoUrl: entry.userPhotoUrl,
+        initialWeight: entry.initialWeight,
+        currentWeight: entry.currentWeight,
+        weightLost: entry.weightLost,
+        percentageLost: entry.percentageLost,
+        isCurrentUser: entry.isCurrentUser,
+      ));
+    }
+
+    return rankedList;
+  }
+
+  /// Stream do ranking de uma competição (atualiza em tempo real)
+  Stream<List<RankingEntryModel>> getCompetitionRankingStream(
+    String competitionId,
+  ) {
+    final controller = StreamController<List<RankingEntryModel>>();
+
+    Future<void> refreshRanking() async {
+      try {
+        final ranking = await getCompetitionRanking(competitionId);
+        if (!controller.isClosed) {
+          controller.add(ranking);
+        }
+      } catch (e) {
+        if (!controller.isClosed) {
+          controller.addError(e);
+        }
+      }
+    }
+
+    // Escuta mudanças nos participantes
+    final participantsSubscription = _participantsCollection
+        .where('competitionId', isEqualTo: competitionId)
+        .where('status', isEqualTo: ParticipantStatus.active.name)
+        .snapshots()
+        .listen((_) => refreshRanking());
+
+    // Escuta mudanças nos registros de peso (para atualizar ranking quando alguém registra peso)
+    final weightsSubscription = _firestore
+        .collection('weightRecords')
+        .snapshots()
+        .listen((_) => refreshRanking());
+
+    controller.onCancel = () {
+      participantsSubscription.cancel();
+      weightsSubscription.cancel();
+    };
+
+    return controller.stream;
   }
 
   /// Exclui uma competição (apenas admin)

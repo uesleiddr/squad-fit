@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import '../../../core/models/competition_model.dart';
+import '../../../core/services/competition_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/user_stats_card.dart';
@@ -14,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late final AnimationController _lottieController;
+  final _competitionService = CompetitionService();
 
   @override
   void initState() {
@@ -74,18 +77,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: SafeArea(
         child: ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
-          child: SingleChildScrollView(
-            physics: const ClampingScrollPhysics(),
-            padding: context.screenPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const UserStatsCard(),
-                SizedBox(height: context.cardSpacing),
-                const RankingList(),
-                const SizedBox(height: 80),
-              ],
-            ),
+          child: StreamBuilder<List<CompetitionModel>>(
+            stream: _competitionService.getMyCompetitionsStream(),
+            builder: (context, snapshot) {
+              final competitions = snapshot.data ?? [];
+              final activeCompetition = competitions
+                  .where((c) => !c.hasEnded)
+                  .toList()
+                  .firstOrNull;
+
+              return SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: context.screenPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const UserStatsCard(),
+                    SizedBox(height: context.cardSpacing),
+                    RankingList(competition: activeCompetition),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),
