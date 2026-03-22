@@ -19,7 +19,7 @@ class _RankingListState extends State<RankingList> {
   @override
   Widget build(BuildContext context) {
     if (widget.competition == null) {
-      return _buildEmptyState(context, 'Sem competicao ativa');
+      return _buildEmptyState(context, 'Sem competição ativa');
     }
 
     final hasEnded = widget.competition!.hasEnded;
@@ -178,7 +178,7 @@ class _RankingListState extends State<RankingList> {
                       Icon(Icons.celebration, color: Colors.green.shade700),
                       const SizedBox(width: 8),
                       Text(
-                        'Parabens! Voce venceu!',
+                        'Parabéns! Você venceu!',
                         style: TextStyle(
                           color: Colors.green.shade700,
                           fontWeight: FontWeight.bold,
@@ -331,7 +331,7 @@ class _RankingListState extends State<RankingList> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         title: const Text('Arquivar Desafio'),
         content: const Text(
-          'Ao arquivar, este desafio sera removido da sua tela inicial. '
+          'Ao arquivar, este desafio será removido da sua tela inicial. '
           'Deseja continuar?',
         ),
         actions: [
@@ -347,10 +347,10 @@ class _RankingListState extends State<RankingList> {
       ),
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed == true && context.mounted) {
       try {
         await _competitionService.archiveCompetition(widget.competition!.id);
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Desafio arquivado com sucesso'),
@@ -359,10 +359,10 @@ class _RankingListState extends State<RankingList> {
           );
         }
       } catch (e) {
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Erro ao arquivar: $e'),
+              content: const Text('Não foi possível arquivar o desafio. Tente novamente.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -439,7 +439,7 @@ class _RankingTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                'Voce',
+                'Você',
                 style: TextStyle(
                   color: colorScheme.onSurface,
                   fontSize: 12,

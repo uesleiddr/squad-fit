@@ -94,7 +94,7 @@ class _UserStatsCardState extends State<UserStatsCard> {
     WeightRecordModel? latestWeight,
     CompetitionModel? activeCompetition,
   ) {
-    final firstName = user?.firstName ?? 'Usuario';
+    final firstName = user?.firstName ?? 'Usuário';
     final currentWeight = latestWeight?.weight ?? user?.initialWeight;
     final goalWeight = user?.goalWeight;
     final initialWeight = user?.initialWeight;
@@ -147,7 +147,7 @@ class _UserStatsCardState extends State<UserStatsCard> {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Ola, $firstName!',
+                          'Olá, $firstName!',
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.bold,
@@ -159,8 +159,8 @@ class _UserStatsCardState extends State<UserStatsCard> {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           activeCompetition != null
-                              ? 'Competicao: ${activeCompetition.name}'
-                              : 'Sem competicao ativa',
+                              ? 'Competição: ${activeCompetition.name}'
+                              : 'Sem competição ativa',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: colorScheme.onPrimaryContainer

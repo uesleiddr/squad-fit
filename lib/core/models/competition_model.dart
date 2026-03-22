@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
 /// Regra de vitória da competição
 enum VictoryRule {
@@ -8,7 +9,7 @@ enum VictoryRule {
   percentageLoss,
 }
 
-class CompetitionModel {
+class CompetitionModel extends Equatable {
   final String id;
   final String name;
   final String? description;
@@ -20,7 +21,7 @@ class CompetitionModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  CompetitionModel({
+  const CompetitionModel({
     required this.id,
     required this.name,
     this.description,
@@ -100,4 +101,18 @@ class CompetitionModel {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        name,
+        description,
+        adminId,
+        startDate,
+        endDate,
+        inviteCode,
+        victoryRule,
+        createdAt,
+        updatedAt,
+      ];
 }

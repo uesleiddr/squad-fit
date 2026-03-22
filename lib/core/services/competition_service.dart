@@ -36,7 +36,7 @@ class CompetitionService {
   }) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final now = DateTime.now();
@@ -86,7 +86,7 @@ class CompetitionService {
   Future<void> joinCompetitionByCode(String inviteCode, {required double currentWeight}) async {
     final competition = await getCompetitionByInviteCode(inviteCode);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw Exception('Competição não encontrada');
     }
 
     final weightRecord = await _weightService.getWeightForDate(
@@ -103,7 +103,7 @@ class CompetitionService {
   }) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final existing = await _participantsCollection
@@ -116,7 +116,7 @@ class CompetitionService {
       final existingParticipant = CompetitionParticipantModel.fromFirestore(existing.docs.first);
 
       if (existingParticipant.status == ParticipantStatus.active) {
-        throw Exception('Voce ja esta nesta competicao');
+        throw Exception('Você já está nesta competição');
       }
 
       final updatedParticipant = existingParticipant.copyWith(
@@ -220,16 +220,16 @@ class CompetitionService {
   }) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw Exception('Competição não encontrada');
     }
 
     if (competition.adminId != authUser.uid) {
-      throw Exception('Apenas o administrador pode editar a competicao');
+      throw Exception('Apenas o administrador pode editar a competição');
     }
 
     final updates = <String, dynamic>{
@@ -250,12 +250,12 @@ class CompetitionService {
   ) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw Exception('Competição não encontrada');
     }
 
     if (competition.adminId != authUser.uid) {
@@ -263,7 +263,7 @@ class CompetitionService {
     }
 
     if (participantUserId == authUser.uid) {
-      throw Exception('O administrador nao pode se remover da competicao');
+      throw Exception('O administrador não pode se remover da competição');
     }
 
     final participantDoc = await _participantsCollection
@@ -282,16 +282,16 @@ class CompetitionService {
   Future<void> leaveCompetition(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw Exception('Competição não encontrada');
     }
 
     if (competition.adminId == authUser.uid) {
-      throw Exception('O administrador nao pode sair da competicao');
+      throw Exception('O administrador não pode sair da competição');
     }
 
     final participantDoc = await _participantsCollection
@@ -310,16 +310,16 @@ class CompetitionService {
   Future<void> archiveCompetition(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw Exception('Competição não encontrada');
     }
 
     if (!competition.hasEnded) {
-      throw Exception('Apenas competicoes encerradas podem ser arquivadas');
+      throw Exception('Apenas competições encerradas podem ser arquivadas');
     }
 
     final participantDoc = await _participantsCollection
@@ -510,16 +510,16 @@ class CompetitionService {
   Future<void> deleteCompetition(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw Exception('Competição não encontrada');
     }
 
     if (competition.adminId != authUser.uid) {
-      throw Exception('Apenas o administrador pode excluir a competicao');
+      throw Exception('Apenas o administrador pode excluir a competição');
     }
 
     final participants = await _participantsCollection

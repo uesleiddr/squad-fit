@@ -99,7 +99,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao salvar perfil: $e'),
+            content: const Text('Não foi possível salvar o perfil. Tente novamente.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -127,7 +127,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Precisamos de algumas informacoes para comecar',
+                  'Precisamos de algumas informações para começar',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -222,7 +222,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     }
                     final weight = double.tryParse(value.replaceAll(',', '.'));
                     if (weight == null || weight <= 0) {
-                      return 'Peso invalido';
+                      return 'Peso inválido';
                     }
                     return null;
                   },
@@ -261,7 +261,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             ),
                           )
                         : const Text(
-                            'Comecar',
+                            'Começar',
                             style: TextStyle(fontSize: 16),
                           ),
                   ),

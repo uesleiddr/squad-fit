@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
+import '../../../core/utils/date_formatter.dart';
 
 class EditCompetitionModal extends StatefulWidget {
   final CompetitionModel competition;
@@ -67,14 +68,6 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
     }
   }
 
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-    return '${date.day} de ${months[date.month - 1]} de ${date.year}';
-  }
-
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -97,7 +90,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao atualizar: $e'),
+            content: const Text('Não foi possível atualizar o desafio. Tente novamente.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -170,7 +163,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
               TextFormField(
                 controller: _descriptionController,
                 decoration: InputDecoration(
-                  labelText: 'Descricao (opcional)',
+                  labelText: 'Descrição (opcional)',
                   hintText: 'Descreva o objetivo do desafio',
                   prefixIcon: const Icon(Icons.description_outlined),
                   border: OutlineInputBorder(
@@ -187,7 +180,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
                 borderRadius: BorderRadius.circular(6),
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Data de termino',
+                    labelText: 'Data de término',
                     prefixIcon: const Icon(Icons.calendar_today),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
@@ -196,7 +189,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_formatDate(_endDate)),
+                      Text(DateFormatter.format(_endDate)),
                       const Icon(Icons.arrow_drop_down),
                     ],
                   ),
@@ -204,7 +197,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
               ),
               const SizedBox(height: 8),
               Text(
-                'A regra de vitoria nao pode ser alterada.',
+                'A regra de vitória não pode ser alterada.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.grey,
                     ),

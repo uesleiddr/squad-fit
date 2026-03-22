@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
+import '../../../core/utils/date_formatter.dart';
 
 class CreateCompetitionModal extends StatefulWidget {
   const CreateCompetitionModal({super.key});
@@ -111,7 +112,7 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao criar desafio: $e'),
+            content: const Text('Não foi possível criar o desafio. Tente novamente.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -121,14 +122,6 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-    return '${date.day} de ${months[date.month - 1]} de ${date.year}';
   }
 
   @override
@@ -247,7 +240,7 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
                         child: Text(
                           _endDate == null
                               ? 'Selecione a data'
-                              : _formatDate(_endDate!),
+                              : DateFormatter.format(_endDate!),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: _endDate == null

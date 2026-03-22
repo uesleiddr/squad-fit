@@ -13,7 +13,11 @@ class WeightService {
   Future<WeightRecordModel> addWeight(double weight, {DateTime? date}) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
+    }
+
+    if (weight <= 0 || weight > 500) {
+      throw Exception('Peso inválido');
     }
 
     final now = DateTime.now();
@@ -74,6 +78,19 @@ class WeightService {
 
     if (snapshot.docs.isEmpty) return null;
     return WeightRecordModel.fromFirestore(snapshot.docs.first);
+  }
+
+  /// Retorna o peso atual do usuário (último registro ou peso inicial do perfil)
+  /// Lança exceção se nenhum peso estiver disponível
+  Future<double> getCurrentWeight(double? initialWeight) async {
+    final latestWeight = await getLatestWeight();
+    if (latestWeight != null) {
+      return latestWeight.weight;
+    }
+    if (initialWeight != null) {
+      return initialWeight;
+    }
+    throw Exception('Você precisa registrar seu peso primeiro');
   }
 
   /// Busca registros de peso de um usuário em um período
@@ -137,20 +154,52 @@ class WeightService {
     return null;
   }
 
-  /// Deleta um registro de peso
+  /// Deleta um registro de peso (apenas do próprio usuário)
   Future<void> deleteWeight(String recordId) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) {
+      throw Exception('Usuário não autenticado');
+    }
+
+    final doc = await _weightsCollection.doc(recordId).get();
+    if (!doc.exists) {
+      throw Exception('Registro não encontrado');
+    }
+
+    if (doc.data()?['userId'] != authUser.uid) {
+      throw Exception('Sem permissão para deletar este registro');
+    }
+
     await _weightsCollection.doc(recordId).delete();
   }
 
-  /// Atualiza um registro de peso
+  /// Atualiza um registro de peso (apenas do próprio usuário)
   Future<void> updateWeight(String recordId, double newWeight) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) {
+      throw Exception('Usuário não autenticado');
+    }
+
+    if (newWeight <= 0 || newWeight > 500) {
+      throw Exception('Peso inválido');
+    }
+
+    final doc = await _weightsCollection.doc(recordId).get();
+    if (!doc.exists) {
+      throw Exception('Registro não encontrado');
+    }
+
+    if (doc.data()?['userId'] != authUser.uid) {
+      throw Exception('Sem permissão para atualizar este registro');
+    }
+
     await _weightsCollection.doc(recordId).update({
       'weight': newWeight,
     });
   }
 
-  /// Busca o peso mais recente de múltiplos usuários em batch
-  /// Retorna Map<userId, WeightRecordModel?>
+  /// Busca o peso mais recente de múltiplos usuários em batch.
+  /// Retorna um Map onde a chave é o userId e o valor é o WeightRecordModel (ou null).
   Future<Map<String, WeightRecordModel?>> getLatestWeightsForUsers(
     List<String> userIds,
   ) async {
