@@ -1138,6 +1138,16 @@ class _JoinCompetitionModalState extends State<_JoinCompetitionModal> {
       return;
     }
 
+    if (code.length != 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('O codigo deve ter 8 caracteres'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {

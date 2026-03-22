@@ -89,13 +89,25 @@ class CompetitionService {
   }
 
   /// Entra em uma competição usando código de convite
+  /// O peso inicial é determinado pela data de início da competição:
+  /// 1. Peso mais recente ATÉ a data de início (peso que o usuário tinha naquela data)
+  /// 2. Se não existir, primeiro peso registrado DEPOIS da data de início
+  /// 3. Se não existir nenhum, usa o peso atual informado
   Future<void> joinCompetitionByCode(String inviteCode, {required double currentWeight}) async {
     final competition = await getCompetitionByInviteCode(inviteCode);
     if (competition == null) {
       throw Exception('Competicao nao encontrada');
     }
 
-    await joinCompetition(competition.id, currentWeight: currentWeight);
+    // Busca o peso correto baseado na data de início da competição
+    final weightService = WeightService();
+    final weightRecord = await weightService.getWeightForDate(
+      targetDate: competition.startDate,
+    );
+
+    final initialWeight = weightRecord?.weight ?? currentWeight;
+
+    await joinCompetition(competition.id, currentWeight: initialWeight);
   }
 
   /// Entra em uma competição
@@ -108,7 +120,7 @@ class CompetitionService {
       throw Exception('Usuario nao autenticado');
     }
 
-    // Verifica se já é participante
+    // Verifica se já é participante ativo
     final existing = await _participantsCollection
         .where('competitionId', isEqualTo: competitionId)
         .where('userId', isEqualTo: authUser.uid)
@@ -116,7 +128,21 @@ class CompetitionService {
         .get();
 
     if (existing.docs.isNotEmpty) {
-      throw Exception('Voce ja esta nesta competicao');
+      final existingParticipant = CompetitionParticipantModel.fromFirestore(existing.docs.first);
+
+      // Se já está ativo, não pode entrar novamente
+      if (existingParticipant.status == ParticipantStatus.active) {
+        throw Exception('Voce ja esta nesta competicao');
+      }
+
+      // Se saiu (removed) ou arquivou, reativa a participação
+      final updatedParticipant = existingParticipant.copyWith(
+        status: ParticipantStatus.active,
+        initialWeight: currentWeight,
+        joinedAt: DateTime.now(),
+      );
+      await _participantsCollection.doc(existingParticipant.id).update(updatedParticipant.toFirestore());
+      return updatedParticipant;
     }
 
     final docRef = _participantsCollection.doc();
@@ -419,10 +445,13 @@ class CompetitionService {
   }
 
   /// Stream do ranking de uma competição (atualiza em tempo real)
+  /// Otimizado para escutar apenas os pesos dos participantes da competição
   Stream<List<RankingEntryModel>> getCompetitionRankingStream(
     String competitionId,
   ) {
     final controller = StreamController<List<RankingEntryModel>>();
+    final List<StreamSubscription> weightSubscriptions = [];
+    StreamSubscription? participantsSubscription;
 
     Future<void> refreshRanking() async {
       try {
@@ -437,22 +466,42 @@ class CompetitionService {
       }
     }
 
+    void setupWeightListeners(List<String> participantUserIds) {
+      // Cancela subscriptions anteriores de peso
+      for (final sub in weightSubscriptions) {
+        sub.cancel();
+      }
+      weightSubscriptions.clear();
+
+      // Cria subscription para cada participante (Firestore não suporta whereIn em streams)
+      for (final userId in participantUserIds) {
+        final sub = _firestore
+            .collection('weightRecords')
+            .where('userId', isEqualTo: userId)
+            .snapshots()
+            .listen((_) => refreshRanking());
+        weightSubscriptions.add(sub);
+      }
+    }
+
     // Escuta mudanças nos participantes
-    final participantsSubscription = _participantsCollection
+    participantsSubscription = _participantsCollection
         .where('competitionId', isEqualTo: competitionId)
         .where('status', isEqualTo: ParticipantStatus.active.name)
         .snapshots()
-        .listen((_) => refreshRanking());
-
-    // Escuta mudanças nos registros de peso (para atualizar ranking quando alguém registra peso)
-    final weightsSubscription = _firestore
-        .collection('weightRecords')
-        .snapshots()
-        .listen((_) => refreshRanking());
+        .listen((snapshot) {
+      // Extrai IDs dos participantes e configura listeners de peso
+      final participantUserIds =
+          snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
+      setupWeightListeners(participantUserIds);
+      refreshRanking();
+    });
 
     controller.onCancel = () {
-      participantsSubscription.cancel();
-      weightsSubscription.cancel();
+      participantsSubscription?.cancel();
+      for (final sub in weightSubscriptions) {
+        sub.cancel();
+      }
     };
 
     return controller.stream;

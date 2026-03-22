@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/deep_link_service.dart';
+import 'core/services/competition_service.dart';
+import 'core/services/weight_service.dart';
+import 'core/services/user_service.dart';
 import 'features/auth/screens/auth_wrapper.dart';
 import 'features/home/screens/home_screen.dart';
 
@@ -152,25 +155,73 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
   }
 
   Future<void> _joinCompetition() async {
+    // Valida o código antes de tentar entrar
+    if (widget.inviteCode.length != 8) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Codigo de convite invalido'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      // Import do service seria necessário aqui
-      // Por enquanto, apenas fecha o dialog
-      // O usuário pode entrar manualmente pela tela de competição
+      // Busca o peso atual do usuário
+      final weightService = WeightService();
+      final userService = UserService();
+
+      final latestWeight = await weightService.getLatestWeight();
+      double currentWeight;
+
+      if (latestWeight != null) {
+        currentWeight = latestWeight.weight;
+      } else {
+        // Fallback para peso inicial do perfil
+        final user = await userService.getCurrentUser();
+        if (user?.initialWeight != null) {
+          currentWeight = user!.initialWeight!;
+        } else {
+          throw Exception('Voce precisa registrar seu peso antes de entrar em um desafio');
+        }
+      }
+
+      final competitionService = CompetitionService();
+      await competitionService.joinCompetitionByCode(
+        widget.inviteCode,
+        currentWeight: currentWeight,
+      );
+
+      if (!mounted) return;
       Navigator.pop(context);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Use o codigo ${widget.inviteCode} na tela de Desafio para entrar'),
+        const SnackBar(
+          content: Text('Voce entrou no desafio com sucesso!'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 4),
+          duration: Duration(seconds: 3),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      String errorMessage = 'Erro ao entrar no desafio';
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('não encontrada') || errorStr.contains('nao encontrada')) {
+        errorMessage = 'Codigo de convite invalido';
+      } else if (errorStr.contains('ja esta') || errorStr.contains('já está') || errorStr.contains('já participa')) {
+        errorMessage = 'Voce ja esta neste desafio';
+      } else if (errorStr.contains('registrar seu peso')) {
+        errorMessage = e.toString().replaceAll('Exception: ', '');
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro: $e'),
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
         ),
       );

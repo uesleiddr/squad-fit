@@ -97,6 +97,46 @@ class WeightService {
         .toList();
   }
 
+  /// Busca o peso que o usuário tinha em uma data específica
+  /// 1. Primeiro tenta o peso mais recente ATÉ a data (o peso atual naquela data)
+  /// 2. Se não existir, pega o primeiro peso registrado DEPOIS da data
+  Future<WeightRecordModel?> getWeightForDate({
+    required DateTime targetDate,
+    String? userId,
+  }) async {
+    final targetUserId = userId ?? _auth.currentUser?.uid;
+    if (targetUserId == null) return null;
+
+    // Fim do dia para incluir registros do próprio dia
+    final endOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59);
+
+    // 1. Tenta buscar o peso mais recente ATÉ a data alvo
+    final beforeSnapshot = await _weightsCollection
+        .where('userId', isEqualTo: targetUserId)
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .orderBy('date', descending: true)
+        .limit(1)
+        .get();
+
+    if (beforeSnapshot.docs.isNotEmpty) {
+      return WeightRecordModel.fromFirestore(beforeSnapshot.docs.first);
+    }
+
+    // 2. Se não tem peso antes, busca o primeiro peso DEPOIS da data
+    final afterSnapshot = await _weightsCollection
+        .where('userId', isEqualTo: targetUserId)
+        .where('date', isGreaterThan: Timestamp.fromDate(endOfDay))
+        .orderBy('date', descending: false)
+        .limit(1)
+        .get();
+
+    if (afterSnapshot.docs.isNotEmpty) {
+      return WeightRecordModel.fromFirestore(afterSnapshot.docs.first);
+    }
+
+    return null;
+  }
+
   /// Deleta um registro de peso
   Future<void> deleteWeight(String recordId) async {
     await _weightsCollection.doc(recordId).delete();
