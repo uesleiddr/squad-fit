@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
 import '../../competition/screens/competition_screen.dart';
 import '../../weight/screens/add_weight_screen.dart';
@@ -19,7 +20,7 @@ class AppDrawer extends StatelessWidget {
   }
 
   Future<void> _handleSignOut() async {
-    await AuthService().signOut();
+    await getIt<AuthService>().signOut();
   }
 
   @override
@@ -116,12 +117,6 @@ class AppDrawer extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
                 );
               },
-            ),
-            _DrawerItem(
-              icon: Icons.leaderboard_outlined,
-              selectedIcon: Icons.leaderboard,
-              title: 'Ranking',
-              onTap: () => _handleTap(context),
             ),
             const Divider(indent: 16, endIndent: 16),
             _DrawerItem(

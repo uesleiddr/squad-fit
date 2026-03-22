@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/models/ranking_entry_model.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 
 class RankingList extends StatefulWidget {
   final CompetitionModel? competition;
-  final VoidCallback? onDismiss;
 
-  const RankingList({super.key, this.competition, this.onDismiss});
+  const RankingList({super.key, this.competition});
 
   @override
   State<RankingList> createState() => _RankingListState();
 }
 
 class _RankingListState extends State<RankingList> {
-  final _competitionService = CompetitionService();
+  final _competitionService = getIt<CompetitionService>();
 
   @override
   Widget build(BuildContext context) {
@@ -357,7 +357,6 @@ class _RankingListState extends State<RankingList> {
               backgroundColor: Colors.green,
             ),
           );
-          widget.onDismiss?.call();
         }
       } catch (e) {
         if (mounted) {
