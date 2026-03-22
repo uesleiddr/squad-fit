@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/models.dart';
+import '../di/service_locator.dart';
 import 'weight_service.dart';
 import 'user_service.dart';
 
@@ -10,20 +11,22 @@ class CompetitionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Usa DI para serviços dependentes
+  WeightService get _weightService => getIt<WeightService>();
+  UserService get _userService => getIt<UserService>();
+
   CollectionReference<Map<String, dynamic>> get _competitionsCollection =>
       _firestore.collection('competitions');
 
   CollectionReference<Map<String, dynamic>> get _participantsCollection =>
       _firestore.collection('competitionParticipants');
 
-  /// Gera um código de convite único
   String _generateInviteCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random.secure();
     return List.generate(8, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
-  /// Cria uma nova competição
   Future<CompetitionModel> createCompetition({
     required String name,
     String? description,
@@ -55,14 +58,8 @@ class CompetitionService {
 
     await docRef.set(competition.toFirestore());
 
-    // Admin automaticamente entra como participante
-    // Busca o peso atual do admin
-    final weightService = WeightService();
-    final userService = UserService();
-
-    final latestWeight = await weightService.getLatestWeight();
-    final user = await userService.getCurrentUser();
-
+    final latestWeight = await _weightService.getLatestWeight();
+    final user = await _userService.getCurrentUser();
     final currentWeight = latestWeight?.weight ?? user?.initialWeight ?? 0;
 
     await joinCompetition(competition.id, currentWeight: currentWeight);
@@ -70,14 +67,12 @@ class CompetitionService {
     return competition;
   }
 
-  /// Busca uma competição pelo ID
   Future<CompetitionModel?> getCompetitionById(String competitionId) async {
     final doc = await _competitionsCollection.doc(competitionId).get();
     if (!doc.exists) return null;
     return CompetitionModel.fromFirestore(doc);
   }
 
-  /// Busca uma competição pelo código de convite
   Future<CompetitionModel?> getCompetitionByInviteCode(String inviteCode) async {
     final snapshot = await _competitionsCollection
         .where('inviteCode', isEqualTo: inviteCode.toUpperCase())
@@ -88,29 +83,20 @@ class CompetitionService {
     return CompetitionModel.fromFirestore(snapshot.docs.first);
   }
 
-  /// Entra em uma competição usando código de convite
-  /// O peso inicial é determinado pela data de início da competição:
-  /// 1. Peso mais recente ATÉ a data de início (peso que o usuário tinha naquela data)
-  /// 2. Se não existir, primeiro peso registrado DEPOIS da data de início
-  /// 3. Se não existir nenhum, usa o peso atual informado
   Future<void> joinCompetitionByCode(String inviteCode, {required double currentWeight}) async {
     final competition = await getCompetitionByInviteCode(inviteCode);
     if (competition == null) {
       throw Exception('Competicao nao encontrada');
     }
 
-    // Busca o peso correto baseado na data de início da competição
-    final weightService = WeightService();
-    final weightRecord = await weightService.getWeightForDate(
+    final weightRecord = await _weightService.getWeightForDate(
       targetDate: competition.startDate,
     );
 
     final initialWeight = weightRecord?.weight ?? currentWeight;
-
     await joinCompetition(competition.id, currentWeight: initialWeight);
   }
 
-  /// Entra em uma competição
   Future<CompetitionParticipantModel> joinCompetition(
     String competitionId, {
     required double currentWeight,
@@ -120,7 +106,6 @@ class CompetitionService {
       throw Exception('Usuario nao autenticado');
     }
 
-    // Verifica se já é participante ativo
     final existing = await _participantsCollection
         .where('competitionId', isEqualTo: competitionId)
         .where('userId', isEqualTo: authUser.uid)
@@ -130,12 +115,10 @@ class CompetitionService {
     if (existing.docs.isNotEmpty) {
       final existingParticipant = CompetitionParticipantModel.fromFirestore(existing.docs.first);
 
-      // Se já está ativo, não pode entrar novamente
       if (existingParticipant.status == ParticipantStatus.active) {
         throw Exception('Voce ja esta nesta competicao');
       }
 
-      // Se saiu (removed) ou arquivou, reativa a participação
       final updatedParticipant = existingParticipant.copyWith(
         status: ParticipantStatus.active,
         initialWeight: currentWeight,
@@ -159,12 +142,10 @@ class CompetitionService {
     return participant;
   }
 
-  /// Lista competições do usuário atual
   Future<List<CompetitionModel>> getMyCompetitions() async {
     final authUser = _auth.currentUser;
     if (authUser == null) return [];
 
-    // Busca participações do usuário
     final participations = await _participantsCollection
         .where('userId', isEqualTo: authUser.uid)
         .where('status', isEqualTo: ParticipantStatus.active.name)
@@ -172,19 +153,32 @@ class CompetitionService {
 
     if (participations.docs.isEmpty) return [];
 
-    // Busca as competições correspondentes
     final competitionIds = participations.docs
         .map((doc) => doc.data()['competitionId'] as String)
         .toList();
 
-    final competitions = await Future.wait(
-      competitionIds.map((id) => getCompetitionById(id)),
-    );
-
-    return competitions.whereType<CompetitionModel>().toList();
+    return _getCompetitionsByIds(competitionIds);
   }
 
-  /// Stream das competições do usuário (tempo real)
+  Future<List<CompetitionModel>> _getCompetitionsByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    final List<CompetitionModel> results = [];
+
+    for (var i = 0; i < ids.length; i += 30) {
+      final batch = ids.skip(i).take(30).toList();
+      final snapshot = await _competitionsCollection
+          .where(FieldPath.documentId, whereIn: batch)
+          .get();
+
+      results.addAll(
+        snapshot.docs.map((doc) => CompetitionModel.fromFirestore(doc)),
+      );
+    }
+
+    return results;
+  }
+
   Stream<List<CompetitionModel>> getMyCompetitionsStream() {
     final authUser = _auth.currentUser;
     if (authUser == null) return Stream.value([]);
@@ -200,15 +194,10 @@ class CompetitionService {
           .map((doc) => doc.data()['competitionId'] as String)
           .toList();
 
-      final competitions = await Future.wait(
-        competitionIds.map((id) => getCompetitionById(id)),
-      );
-
-      return competitions.whereType<CompetitionModel>().toList();
+      return _getCompetitionsByIds(competitionIds);
     });
   }
 
-  /// Lista participantes de uma competição
   Future<List<CompetitionParticipantModel>> getCompetitionParticipants(
     String competitionId,
   ) async {
@@ -222,7 +211,6 @@ class CompetitionService {
         .toList();
   }
 
-  /// Atualiza dados da competição (apenas admin)
   Future<void> updateCompetition(
     String competitionId, {
     String? name,
@@ -256,7 +244,6 @@ class CompetitionService {
     await _competitionsCollection.doc(competitionId).update(updates);
   }
 
-  /// Remove um participante da competição (apenas admin)
   Future<void> removeParticipant(
     String competitionId,
     String participantUserId,
@@ -292,7 +279,6 @@ class CompetitionService {
     }
   }
 
-  /// Sai de uma competição
   Future<void> leaveCompetition(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
@@ -321,7 +307,6 @@ class CompetitionService {
     }
   }
 
-  /// Arquiva uma competição encerrada (mantém no histórico)
   Future<void> archiveCompetition(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
@@ -350,7 +335,6 @@ class CompetitionService {
     }
   }
 
-  /// Verifica se o usuário é admin de uma competição
   Future<bool> isAdmin(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) return false;
@@ -359,15 +343,13 @@ class CompetitionService {
     return competition?.adminId == authUser.uid;
   }
 
-  /// Verifica se o usuário atual é admin (versão síncrona usando o uid)
   bool isCurrentUserAdmin(String adminId) {
     final authUser = _auth.currentUser;
     if (authUser == null) return false;
     return authUser.uid == adminId;
   }
 
-  /// Obtém o ranking de uma competição
-  /// Retorna lista ordenada por regra de vitória (porcentagem ou kg perdidos)
+  /// Obtém o ranking de uma competição (OTIMIZADO - batch fetch)
   Future<List<RankingEntryModel>> getCompetitionRanking(
     String competitionId,
   ) async {
@@ -378,20 +360,20 @@ class CompetitionService {
     final participants = await getCompetitionParticipants(competitionId);
     if (participants.isEmpty) return [];
 
-    final weightService = WeightService();
-    final userService = UserService();
+    // Coleta todos os userIds para batch fetch
+    final userIds = participants.map((p) => p.userId).toList();
+
+    // Batch fetch: busca todos os usuários e pesos de uma vez
+    final usersMap = await _userService.getUsersByIds(userIds);
+    final weightsMap = await _weightService.getLatestWeightsForUsers(userIds);
 
     final List<RankingEntryModel> rankings = [];
 
     for (final participant in participants) {
-      // Busca dados do usuário
-      final user = await userService.getUserById(participant.userId);
+      final user = usersMap[participant.userId];
       if (user == null) continue;
 
-      // Busca peso atual do participante
-      final latestWeight = await weightService.getLatestWeight(
-        userId: participant.userId,
-      );
+      final latestWeight = weightsMap[participant.userId];
 
       final initialWeight = participant.initialWeight > 0
           ? participant.initialWeight
@@ -405,7 +387,7 @@ class CompetitionService {
           : 0.0;
 
       rankings.add(RankingEntryModel(
-        position: 0, // Será definido após ordenação
+        position: 0,
         userId: participant.userId,
         userName: '${user.firstName} ${user.lastName}'.trim(),
         userPhotoUrl: user.photoUrl,
@@ -425,89 +407,106 @@ class CompetitionService {
     }
 
     // Define posições
-    final rankedList = <RankingEntryModel>[];
-    for (var i = 0; i < rankings.length; i++) {
-      final entry = rankings[i];
-      rankedList.add(RankingEntryModel(
-        position: i + 1,
-        userId: entry.userId,
-        userName: entry.userName,
-        userPhotoUrl: entry.userPhotoUrl,
-        initialWeight: entry.initialWeight,
-        currentWeight: entry.currentWeight,
-        weightLost: entry.weightLost,
-        percentageLost: entry.percentageLost,
-        isCurrentUser: entry.isCurrentUser,
-      ));
-    }
-
-    return rankedList;
+    return rankings.asMap().entries.map((entry) {
+      final rank = entry.value;
+      return RankingEntryModel(
+        position: entry.key + 1,
+        userId: rank.userId,
+        userName: rank.userName,
+        userPhotoUrl: rank.userPhotoUrl,
+        initialWeight: rank.initialWeight,
+        currentWeight: rank.currentWeight,
+        weightLost: rank.weightLost,
+        percentageLost: rank.percentageLost,
+        isCurrentUser: rank.isCurrentUser,
+      );
+    }).toList();
   }
 
-  /// Stream do ranking de uma competição (atualiza em tempo real)
-  /// Otimizado para escutar apenas os pesos dos participantes da competição
+  /// Stream do ranking (CORRIGIDO - sem memory leak)
   Stream<List<RankingEntryModel>> getCompetitionRankingStream(
     String competitionId,
   ) {
-    final controller = StreamController<List<RankingEntryModel>>();
-    final List<StreamSubscription> weightSubscriptions = [];
+    final controller = StreamController<List<RankingEntryModel>>.broadcast();
+
+    List<StreamSubscription> weightSubscriptions = [];
     StreamSubscription? participantsSubscription;
+    bool isDisposed = false;
+    Timer? debounceTimer;
 
     Future<void> refreshRanking() async {
+      if (isDisposed || controller.isClosed) return;
+
       try {
         final ranking = await getCompetitionRanking(competitionId);
-        if (!controller.isClosed) {
+        if (!isDisposed && !controller.isClosed) {
           controller.add(ranking);
         }
       } catch (e) {
-        if (!controller.isClosed) {
+        if (!isDisposed && !controller.isClosed) {
           controller.addError(e);
         }
       }
     }
 
-    void setupWeightListeners(List<String> participantUserIds) {
-      // Cancela subscriptions anteriores de peso
+    // Debounce para evitar múltiplas chamadas em sequência
+    void debouncedRefresh() {
+      debounceTimer?.cancel();
+      debounceTimer = Timer(const Duration(milliseconds: 300), refreshRanking);
+    }
+
+    void cleanupWeightSubscriptions() {
       for (final sub in weightSubscriptions) {
         sub.cancel();
       }
-      weightSubscriptions.clear();
+      weightSubscriptions = [];
+    }
 
-      // Cria subscription para cada participante (Firestore não suporta whereIn em streams)
+    void setupWeightListeners(List<String> participantUserIds) {
+      cleanupWeightSubscriptions();
+
+      if (isDisposed) return;
+
       for (final userId in participantUserIds) {
         final sub = _firestore
             .collection('weightRecords')
             .where('userId', isEqualTo: userId)
             .snapshots()
-            .listen((_) => refreshRanking());
+            .listen((_) => debouncedRefresh());
         weightSubscriptions.add(sub);
       }
     }
 
-    // Escuta mudanças nos participantes
     participantsSubscription = _participantsCollection
         .where('competitionId', isEqualTo: competitionId)
         .where('status', isEqualTo: ParticipantStatus.active.name)
         .snapshots()
-        .listen((snapshot) {
-      // Extrai IDs dos participantes e configura listeners de peso
-      final participantUserIds =
-          snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
-      setupWeightListeners(participantUserIds);
-      refreshRanking();
-    });
+        .listen(
+      (snapshot) {
+        if (isDisposed) return;
+
+        final participantUserIds =
+            snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
+        setupWeightListeners(participantUserIds);
+        debouncedRefresh();
+      },
+      onError: (e) {
+        if (!isDisposed && !controller.isClosed) {
+          controller.addError(e);
+        }
+      },
+    );
 
     controller.onCancel = () {
+      isDisposed = true;
+      debounceTimer?.cancel();
       participantsSubscription?.cancel();
-      for (final sub in weightSubscriptions) {
-        sub.cancel();
-      }
+      cleanupWeightSubscriptions();
     };
 
     return controller.stream;
   }
 
-  /// Exclui uma competição (apenas admin)
   Future<void> deleteCompetition(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
@@ -523,7 +522,6 @@ class CompetitionService {
       throw Exception('Apenas o administrador pode excluir a competicao');
     }
 
-    // Remove todos os participantes
     final participants = await _participantsCollection
         .where('competitionId', isEqualTo: competitionId)
         .get();
@@ -532,7 +530,6 @@ class CompetitionService {
       await _participantsCollection.doc(doc.id).delete();
     }
 
-    // Remove a competição
     await _competitionsCollection.doc(competitionId).delete();
   }
 }

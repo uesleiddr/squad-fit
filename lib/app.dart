@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
+import 'core/di/service_locator.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/competition_service.dart';
 import 'core/services/weight_service.dart';
@@ -17,7 +18,7 @@ class SquadFitApp extends StatefulWidget {
 }
 
 class _SquadFitAppState extends State<SquadFitApp> {
-  final _deepLinkService = DeepLinkService();
+  final _deepLinkService = getIt<DeepLinkService>();
 
   @override
   void initState() {
@@ -171,8 +172,8 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
 
     try {
       // Busca o peso atual do usuário
-      final weightService = WeightService();
-      final userService = UserService();
+      final weightService = getIt<WeightService>();
+      final userService = getIt<UserService>();
 
       final latestWeight = await weightService.getLatestWeight();
       double currentWeight;
@@ -189,7 +190,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
         }
       }
 
-      final competitionService = CompetitionService();
+      final competitionService = getIt<CompetitionService>();
       await competitionService.joinCompetitionByCode(
         widget.inviteCode,
         currentWeight: currentWeight,

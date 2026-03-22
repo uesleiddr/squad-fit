@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/utils/responsive.dart';
 
@@ -12,7 +13,7 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _userService = UserService();
+  final _userService = getIt<UserService>();
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();

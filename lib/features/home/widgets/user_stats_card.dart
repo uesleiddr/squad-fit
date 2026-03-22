@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/models/weight_record_model.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/services/competition_service.dart';
+
+/// Dados combinados para o UserStatsCard
+class _UserStatsData {
+  final UserModel? user;
+  final WeightRecordModel? latestWeight;
+  final CompetitionModel? activeCompetition;
+
+  _UserStatsData({
+    this.user,
+    this.latestWeight,
+    this.activeCompetition,
+  });
+}
 
 class UserStatsCard extends StatefulWidget {
   const UserStatsCard({super.key});
@@ -14,45 +29,59 @@ class UserStatsCard extends StatefulWidget {
 }
 
 class _UserStatsCardState extends State<UserStatsCard> {
-  final _userService = UserService();
-  final _weightService = WeightService();
-  final _competitionService = CompetitionService();
+  final _userService = getIt<UserService>();
+  final _weightService = getIt<WeightService>();
+  final _competitionService = getIt<CompetitionService>();
+
+  late final Stream<_UserStatsData> _combinedStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _combinedStream = _createCombinedStream();
+  }
+
+  Stream<_UserStatsData> _createCombinedStream() {
+    final userStream = _userService.getCurrentUserStream();
+
+    final weightStream = _weightService
+        .getWeightHistoryStream()
+        .map((records) => records.isNotEmpty ? records.first : null);
+
+    final competitionStream = _competitionService
+        .getMyCompetitionsStream()
+        .map((competitions) =>
+            competitions.where((c) => !c.hasEnded).toList().firstOrNull);
+
+    return Rx.combineLatest3(
+      userStream,
+      weightStream,
+      competitionStream,
+      (UserModel? user, WeightRecordModel? weight, CompetitionModel? competition) {
+        return _UserStatsData(
+          user: user,
+          latestWeight: weight,
+          activeCompetition: competition,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return StreamBuilder<UserModel?>(
-      stream: _userService.getCurrentUserStream(),
-      builder: (context, userSnapshot) {
-        final user = userSnapshot.data;
+    return StreamBuilder<_UserStatsData>(
+      stream: _combinedStream,
+      builder: (context, snapshot) {
+        final data = snapshot.data;
 
-        return StreamBuilder<WeightRecordModel?>(
-          stream: _weightService.getWeightHistoryStream().map(
-                (records) => records.isNotEmpty ? records.first : null,
-              ),
-          builder: (context, weightSnapshot) {
-            final latestWeight = weightSnapshot.data;
-
-            return StreamBuilder<List<CompetitionModel>>(
-              stream: _competitionService.getMyCompetitionsStream(),
-              builder: (context, competitionSnapshot) {
-                final competitions = competitionSnapshot.data ?? [];
-                final activeCompetition = competitions
-                    .where((c) => !c.hasEnded)
-                    .toList()
-                    .firstOrNull;
-
-                return _buildCard(
-                  context,
-                  colorScheme,
-                  user,
-                  latestWeight,
-                  activeCompetition,
-                );
-              },
-            );
-          },
+        return _buildCard(
+          context,
+          colorScheme,
+          data?.user,
+          data?.latestWeight,
+          data?.activeCompetition,
         );
       },
     );

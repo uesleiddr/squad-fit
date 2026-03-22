@@ -148,4 +148,47 @@ class WeightService {
       'weight': newWeight,
     });
   }
+
+  /// Busca o peso mais recente de múltiplos usuários em batch
+  /// Retorna Map<userId, WeightRecordModel?>
+  Future<Map<String, WeightRecordModel?>> getLatestWeightsForUsers(
+    List<String> userIds,
+  ) async {
+    if (userIds.isEmpty) return {};
+
+    final Map<String, WeightRecordModel?> results = {};
+
+    // Inicializa todos como null
+    for (final userId in userIds) {
+      results[userId] = null;
+    }
+
+    // Firestore whereIn suporta máx 30 valores
+    for (var i = 0; i < userIds.length; i += 30) {
+      final batch = userIds.skip(i).take(30).toList();
+
+      // Busca todos os pesos dos usuários do batch
+      final snapshot = await _weightsCollection
+          .where('userId', whereIn: batch)
+          .orderBy('date', descending: true)
+          .get();
+
+      // Agrupa por userId e pega o mais recente de cada
+      final Map<String, WeightRecordModel> latestByUser = {};
+      for (final doc in snapshot.docs) {
+        final record = WeightRecordModel.fromFirestore(doc);
+        // Só guarda se ainda não tem (o primeiro é o mais recente por causa do orderBy)
+        if (!latestByUser.containsKey(record.userId)) {
+          latestByUser[record.userId] = record;
+        }
+      }
+
+      // Atualiza o resultado
+      latestByUser.forEach((userId, record) {
+        results[userId] = record;
+      });
+    }
+
+    return results;
+  }
 }

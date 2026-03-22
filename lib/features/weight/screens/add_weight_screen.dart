@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/utils/responsive.dart';
 
@@ -11,7 +12,7 @@ class AddWeightScreen extends StatefulWidget {
 
 class _AddWeightScreenState extends State<AddWeightScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _weightService = WeightService();
+  final _weightService = getIt<WeightService>();
   final _weightController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();

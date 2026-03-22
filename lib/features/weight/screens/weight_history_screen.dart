@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/models/weight_record_model.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/utils/responsive.dart';
@@ -12,7 +13,7 @@ class WeightHistoryScreen extends StatefulWidget {
 }
 
 class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
-  final _weightService = WeightService();
+  final _weightService = getIt<WeightService>();
 
   String _formatDate(DateTime date) {
     final weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
@@ -70,15 +71,11 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     }
   }
 
-  void _navigateToAddWeight() async {
-    final result = await Navigator.push<bool>(
+  void _navigateToAddWeight() {
+    Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AddWeightScreen()),
     );
-
-    if (result == true) {
-      setState(() {}); // Refresh the list
-    }
   }
 
   @override

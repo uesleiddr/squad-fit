@@ -34,6 +34,9 @@ class DeepLinkService {
     );
   }
 
+  // Regex para validar código: exatamente 8 caracteres alfanuméricos
+  static final _inviteCodeRegex = RegExp(r'^[A-Z0-9]{8}$');
+
   void _handleDeepLink(Uri uri) {
     // Formato esperado: squadfit://join/CODIGO ou https://squadfit.app/join/CODIGO
     final pathSegments = uri.pathSegments;
@@ -49,8 +52,11 @@ class DeepLinkService {
       inviteCode = pathSegments[1].toUpperCase();
     }
 
-    if (inviteCode != null) {
+    // Valida o formato do código antes de processar
+    if (inviteCode != null && _inviteCodeRegex.hasMatch(inviteCode)) {
       onInviteCodeReceived?.call(inviteCode);
+    } else if (inviteCode != null) {
+      debugPrint('Codigo de convite invalido: $inviteCode');
     }
   }
 

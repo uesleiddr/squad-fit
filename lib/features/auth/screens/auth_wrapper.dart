@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'login_screen.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/services/user_service.dart';
 import '../../home/screens/home_screen.dart';
 import '../../profile/screens/profile_setup_screen.dart';
-import '../../../core/services/user_service.dart';
+import 'login_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -42,7 +43,7 @@ class _ProfileChecker extends StatefulWidget {
 }
 
 class _ProfileCheckerState extends State<_ProfileChecker> {
-  final _userService = UserService();
+  final _userService = getIt<UserService>();
   bool _isLoading = true;
   bool _hasProfile = false;
 
