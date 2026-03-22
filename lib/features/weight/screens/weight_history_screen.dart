@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/models/weight_record_model.dart';
 import '../../../core/services/weight_service.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import 'add_weight_screen.dart';
 
@@ -15,23 +16,13 @@ class WeightHistoryScreen extends StatefulWidget {
 class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
   final _weightService = getIt<WeightService>();
 
-  String _formatDate(DateTime date) {
-    final weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-    final months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-
-    return '${weekdays[date.weekday % 7]}, ${date.day} de ${months[date.month - 1]}';
-  }
-
   Future<void> _deleteWeight(WeightRecordModel record) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir registro'),
         content: Text(
-          'Deseja excluir o registro de ${record.weight.toStringAsFixed(1)} kg do dia ${_formatDate(record.date)}?',
+          'Deseja excluir o registro de ${record.weight.toStringAsFixed(1)} kg do dia ${DateFormatter.formatWithWeekday(record.date, includeYear: false)}?',
         ),
         actions: [
           TextButton(
@@ -53,7 +44,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Registro excluido'),
+              content: Text('Registro excluído'),
               backgroundColor: Colors.green,
             ),
           );
@@ -62,7 +53,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Erro ao excluir: $e'),
+              content: const Text('Não foi possível excluir o registro. Tente novamente.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -82,7 +73,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Historico de Peso'),
+        title: const Text('Histórico de Peso'),
       ),
       body: StreamBuilder<List<WeightRecordModel>>(
         stream: _weightService.getWeightHistoryStream(),
@@ -157,7 +148,6 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
               return _WeightCard(
                 record: record,
                 diff: diff,
-                formatDate: _formatDate,
                 onDelete: () => _deleteWeight(record),
               );
             },
@@ -175,13 +165,11 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
 class _WeightCard extends StatelessWidget {
   final WeightRecordModel record;
   final double? diff;
-  final String Function(DateTime) formatDate;
   final VoidCallback onDelete;
 
   const _WeightCard({
     required this.record,
     this.diff,
-    required this.formatDate,
     required this.onDelete,
   });
 
@@ -234,7 +222,7 @@ class _WeightCard extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      formatDate(record.date),
+                      DateFormatter.formatWithWeekday(record.date, includeYear: false),
                       style: TextStyle(
                         color: Colors.grey.shade600,
                       ),

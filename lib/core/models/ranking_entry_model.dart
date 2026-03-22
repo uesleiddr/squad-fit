@@ -1,5 +1,7 @@
+import 'package:equatable/equatable.dart';
+
 /// Modelo para representar uma entrada no ranking da competição
-class RankingEntryModel {
+class RankingEntryModel extends Equatable {
   final int position;
   final String userId;
   final String userName;
@@ -10,7 +12,7 @@ class RankingEntryModel {
   final double percentageLost; // % perdida (positivo = perdeu peso)
   final bool isCurrentUser;
 
-  RankingEntryModel({
+  const RankingEntryModel({
     required this.position,
     required this.userId,
     required this.userName,
@@ -24,4 +26,17 @@ class RankingEntryModel {
 
   /// Retorna true se o usuário perdeu peso
   bool get hasLostWeight => weightLost > 0;
+
+  @override
+  List<Object?> get props => [
+        position,
+        userId,
+        userName,
+        userPhotoUrl,
+        initialWeight,
+        currentWeight,
+        weightLost,
+        percentageLost,
+        isCurrentUser,
+      ];
 }

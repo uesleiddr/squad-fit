@@ -42,7 +42,7 @@ class AuthService {
 
     // Verificar se authenticate é suportado
     if (!_googleSignIn.supportsAuthenticate()) {
-      throw Exception('Google Sign In nao e suportado nesta plataforma');
+      throw Exception('Google Sign In não é suportado nesta plataforma');
     }
 
     try {

@@ -7,16 +7,10 @@ import '../../weight/screens/add_weight_screen.dart';
 import '../../weight/screens/weight_history_screen.dart';
 
 class AppDrawer extends StatelessWidget {
-  final VoidCallback? onClose;
-
-  const AppDrawer({super.key, this.onClose});
+  const AppDrawer({super.key});
 
   void _handleTap(BuildContext context) {
-    if (onClose != null) {
-      onClose!();
-    } else {
-      Navigator.pop(context);
-    }
+    Navigator.pop(context);
   }
 
   Future<void> _handleSignOut() async {
@@ -26,7 +20,7 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final userName = user?.displayName ?? 'Usuario';
+    final userName = user?.displayName ?? 'Usuário';
     final userEmail = user?.email ?? '';
     final userPhoto = user?.photoURL;
 

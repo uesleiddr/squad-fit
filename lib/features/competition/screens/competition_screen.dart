@@ -5,6 +5,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/services/deep_link_service.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../home/widgets/ranking_list.dart';
 import '../widgets/create_competition_modal.dart';
@@ -63,7 +64,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Esta acao nao pode ser desfeita. Todos os participantes serao removidos.',
+              'Esta ação não pode ser desfeita. Todos os participantes serão removidos.',
               style: TextStyle(color: Colors.red, fontSize: 13),
             ),
           ],
@@ -91,7 +92,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Desafio excluido com sucesso'),
+              content: Text('Desafio excluído com sucesso'),
               backgroundColor: Colors.green,
             ),
           );
@@ -100,7 +101,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Erro ao excluir: $e'),
+              content: const Text('Não foi possível excluir o desafio. Tente novamente.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -151,7 +152,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Voce podera entrar novamente usando o codigo de convite.',
+              'Você poderá entrar novamente usando o código de convite.',
               style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ],
@@ -179,7 +180,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Voce saiu do desafio'),
+              content: Text('Você saiu do desafio'),
               backgroundColor: Colors.green,
             ),
           );
@@ -188,7 +189,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Erro ao sair: $e'),
+              content: const Text('Não foi possível sair do desafio. Tente novamente.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -356,7 +357,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Crie um novo desafio para competir com seus amigos ou entre em um desafio existente usando um codigo de convite.',
+              'Crie um novo desafio para competir com seus amigos ou entre em um desafio existente usando um código de convite.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey.shade600,
@@ -391,7 +392,7 @@ class _EmptyState extends StatelessWidget {
                 onPressed: onJoinWithCode,
                 icon: const Icon(Icons.login),
                 label: const Text(
-                  'Entrar com Codigo',
+                  'Entrar com Código',
                   style: TextStyle(fontSize: 16),
                 ),
                 style: OutlinedButton.styleFrom(
@@ -415,14 +416,6 @@ class _CompetitionDetails extends StatelessWidget {
 
   const _CompetitionDetails({required this.competition});
 
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-    return '${date.day} de ${months[date.month - 1]} de ${date.year}';
-  }
-
   String _getVictoryRuleText(VictoryRule rule) {
     switch (rule) {
       case VictoryRule.totalWeightLoss:
@@ -436,7 +429,7 @@ class _CompetitionDetails extends StatelessWidget {
     Clipboard.setData(ClipboardData(text: competition.inviteCode));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Codigo copiado!'),
+        content: Text('Código copiado!'),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 2),
       ),
@@ -447,7 +440,7 @@ class _CompetitionDetails extends StatelessWidget {
     final deepLink =
         getIt<DeepLinkService>().generateInviteLink(competition.inviteCode);
     final message = 'Entre no meu desafio de emagrecimento no Squad Fit! '
-        'Use o codigo: ${competition.inviteCode}\n\n'
+        'Use o código: ${competition.inviteCode}\n\n'
         'Ou clique no link: $deepLink';
 
     final encodedMessage = Uri.encodeComponent(message);
@@ -459,8 +452,8 @@ class _CompetitionDetails extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Nao foi possivel abrir o WhatsApp. '
-                'Verifique se o app esta instalado.'),
+            content: Text('Não foi possível abrir o WhatsApp. '
+                'Verifique se o app está instalado.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -574,7 +567,7 @@ class _CompetitionDetails extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Informacoes',
+                      'Informações',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -603,7 +596,7 @@ class _CompetitionDetails extends StatelessWidget {
                                     ),
                               ),
                               Text(
-                                _formatDate(competition.endDate),
+                                DateFormatter.format(competition.endDate),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -629,7 +622,7 @@ class _CompetitionDetails extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Regra de vitoria',
+                                'Regra de vitória',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -670,7 +663,7 @@ class _CompetitionDetails extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Codigo de Convite',
+                      'Código de Convite',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: colorScheme.onPrimaryContainer
                                 .withValues(alpha: 0.7),

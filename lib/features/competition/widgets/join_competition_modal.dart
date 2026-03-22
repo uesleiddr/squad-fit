@@ -3,6 +3,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/services/user_service.dart';
+import '../../../core/utils/invite_code_validator.dart';
 
 class JoinCompetitionModal extends StatefulWidget {
   const JoinCompetitionModal({super.key});
@@ -33,21 +34,21 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
   }
 
   Future<void> _joinCompetition() async {
-    final code = _codeController.text.trim().toUpperCase();
+    final code = InviteCodeValidator.normalize(_codeController.text);
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Digite o codigo de convite'),
+          content: Text('Digite o código de convite'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    if (code.length != 8) {
+    if (!InviteCodeValidator.isValid(code)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('O codigo deve ter 8 caracteres'),
+          content: Text('Código inválido. Deve ter 8 caracteres alfanuméricos'),
           backgroundColor: Colors.red,
         ),
       );
@@ -59,11 +60,8 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
     try {
       final weightService = getIt<WeightService>();
       final userService = getIt<UserService>();
-
-      final latestWeight = await weightService.getLatestWeight();
       final user = await userService.getCurrentUser();
-
-      final currentWeight = latestWeight?.weight ?? user?.initialWeight ?? 0;
+      final currentWeight = await weightService.getCurrentWeight(user?.initialWeight);
 
       await _competitionService.joinCompetitionByCode(
         code,
@@ -74,7 +72,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Voce entrou no desafio!'),
+            content: Text('Você entrou no desafio!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -83,7 +81,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro: $e'),
+            content: const Text('Não foi possível entrar no desafio. Verifique o código e tente novamente.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -134,7 +132,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Digite o codigo de convite que voce recebeu',
+              'Digite o código de convite que você recebeu',
               style: TextStyle(color: Colors.grey.shade600),
               textAlign: TextAlign.center,
             ),
@@ -144,7 +142,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
             TextField(
               controller: _codeController,
               decoration: InputDecoration(
-                labelText: 'Codigo de Convite',
+                labelText: 'Código de Convite',
                 hintText: 'Ex: ABC12345',
                 prefixIcon: const Icon(Icons.vpn_key_outlined),
                 border: OutlineInputBorder(

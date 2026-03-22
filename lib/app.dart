@@ -5,6 +5,7 @@ import 'core/services/deep_link_service.dart';
 import 'core/services/competition_service.dart';
 import 'core/services/weight_service.dart';
 import 'core/services/user_service.dart';
+import 'core/utils/invite_code_validator.dart';
 import 'features/auth/screens/auth_wrapper.dart';
 import 'features/home/screens/home_screen.dart';
 
@@ -99,7 +100,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Voce foi convidado para participar de um desafio!'),
+          const Text('Você foi convidado para participar de um desafio!'),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
@@ -110,7 +111,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Codigo: '),
+                const Text('Código: '),
                 Text(
                   widget.inviteCode,
                   style: TextStyle(
@@ -132,7 +133,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text('Nao'),
+          child: const Text('Não'),
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _joinCompetition,
@@ -157,11 +158,11 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
 
   Future<void> _joinCompetition() async {
     // Valida o código antes de tentar entrar
-    if (widget.inviteCode.length != 8) {
+    if (!InviteCodeValidator.isValid(widget.inviteCode)) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Codigo de convite invalido'),
+          content: Text('Código de convite inválido'),
           backgroundColor: Colors.red,
         ),
       );
@@ -171,24 +172,10 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
     setState(() => _isLoading = true);
 
     try {
-      // Busca o peso atual do usuário
       final weightService = getIt<WeightService>();
       final userService = getIt<UserService>();
-
-      final latestWeight = await weightService.getLatestWeight();
-      double currentWeight;
-
-      if (latestWeight != null) {
-        currentWeight = latestWeight.weight;
-      } else {
-        // Fallback para peso inicial do perfil
-        final user = await userService.getCurrentUser();
-        if (user?.initialWeight != null) {
-          currentWeight = user!.initialWeight!;
-        } else {
-          throw Exception('Voce precisa registrar seu peso antes de entrar em um desafio');
-        }
-      }
+      final user = await userService.getCurrentUser();
+      final currentWeight = await weightService.getCurrentWeight(user?.initialWeight);
 
       final competitionService = getIt<CompetitionService>();
       await competitionService.joinCompetitionByCode(
@@ -201,7 +188,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Voce entrou no desafio com sucesso!'),
+          content: Text('Você entrou no desafio com sucesso!'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),
@@ -213,9 +200,9 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
       String errorMessage = 'Erro ao entrar no desafio';
       final errorStr = e.toString().toLowerCase();
       if (errorStr.contains('não encontrada') || errorStr.contains('nao encontrada')) {
-        errorMessage = 'Codigo de convite invalido';
+        errorMessage = 'Código de convite inválido';
       } else if (errorStr.contains('ja esta') || errorStr.contains('já está') || errorStr.contains('já participa')) {
-        errorMessage = 'Voce ja esta neste desafio';
+        errorMessage = 'Você já está neste desafio';
       } else if (errorStr.contains('registrar seu peso')) {
         errorMessage = e.toString().replaceAll('Exception: ', '');
       }

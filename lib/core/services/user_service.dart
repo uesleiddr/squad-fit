@@ -50,7 +50,7 @@ class UserService {
   }) async {
     final authUser = currentAuthUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final now = DateTime.now();
@@ -84,7 +84,7 @@ class UserService {
   }) async {
     final authUser = currentAuthUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final updates = <String, dynamic>{

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
 enum ParticipantStatus {
   active,    // Participando ativamente
@@ -6,7 +7,7 @@ enum ParticipantStatus {
   archived,  // Competição encerrada e arquivada (histórico)
 }
 
-class CompetitionParticipantModel {
+class CompetitionParticipantModel extends Equatable {
   final String id;
   final String competitionId;
   final String userId;
@@ -14,7 +15,7 @@ class CompetitionParticipantModel {
   final DateTime joinedAt;
   final ParticipantStatus status;
 
-  CompetitionParticipantModel({
+  const CompetitionParticipantModel({
     required this.id,
     required this.competitionId,
     required this.userId,
@@ -71,4 +72,14 @@ class CompetitionParticipantModel {
       status: status ?? this.status,
     );
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        competitionId,
+        userId,
+        initialWeight,
+        joinedAt,
+        status,
+      ];
 }

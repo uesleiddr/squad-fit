@@ -1,12 +1,9 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import '../utils/invite_code_validator.dart';
 
 class DeepLinkService {
-  static final DeepLinkService _instance = DeepLinkService._internal();
-  factory DeepLinkService() => _instance;
-  DeepLinkService._internal();
-
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _subscription;
 
@@ -34,9 +31,6 @@ class DeepLinkService {
     );
   }
 
-  // Regex para validar código: exatamente 8 caracteres alfanuméricos
-  static final _inviteCodeRegex = RegExp(r'^[A-Z0-9]{8}$');
-
   void _handleDeepLink(Uri uri) {
     // Formato esperado: squadfit://join/CODIGO ou https://squadfit.app/join/CODIGO
     final pathSegments = uri.pathSegments;
@@ -46,17 +40,17 @@ class DeepLinkService {
 
     if (uri.host == 'join' && pathSegments.isNotEmpty) {
       // squadfit://join/CODE -> host="join", pathSegments=["CODE"]
-      inviteCode = pathSegments.first.toUpperCase();
+      inviteCode = InviteCodeValidator.normalize(pathSegments.first);
     } else if (pathSegments.isNotEmpty && pathSegments.first == 'join' && pathSegments.length > 1) {
       // https://domain.com/join/CODE -> pathSegments=["join", "CODE"]
-      inviteCode = pathSegments[1].toUpperCase();
+      inviteCode = InviteCodeValidator.normalize(pathSegments[1]);
     }
 
     // Valida o formato do código antes de processar
-    if (inviteCode != null && _inviteCodeRegex.hasMatch(inviteCode)) {
+    if (inviteCode != null && InviteCodeValidator.isValid(inviteCode)) {
       onInviteCodeReceived?.call(inviteCode);
     } else if (inviteCode != null) {
-      debugPrint('Codigo de convite invalido: $inviteCode');
+      debugPrint('Código de convite inválido: $inviteCode');
     }
   }
 

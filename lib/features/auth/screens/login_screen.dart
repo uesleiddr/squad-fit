@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Email de recuperacao enviado!'),
+            content: Text('Email de recuperação enviado!'),
             backgroundColor: AppTheme.secondaryColor,
           ),
         );
@@ -133,15 +133,15 @@ class _LoginScreenState extends State<LoginScreen> {
   String _getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'Usuario nao encontrado.';
+        return 'Usuário não encontrado.';
       case 'wrong-password':
         return 'Senha incorreta.';
       case 'email-already-in-use':
-        return 'Este email ja esta em uso.';
+        return 'Este email já está em uso.';
       case 'weak-password':
         return 'A senha deve ter pelo menos 6 caracteres.';
       case 'invalid-email':
-        return 'Email invalido.';
+        return 'Email inválido.';
       case 'too-many-requests':
         return 'Muitas tentativas. Tente novamente mais tarde.';
       default:
@@ -217,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         return 'Digite seu email';
                       }
                       if (!value.contains('@')) {
-                        return 'Email invalido';
+                        return 'Email inválido';
                       }
                       return null;
                     },
@@ -302,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Botao Google
                   SignInButton(
                     Buttons.google,
-                    onPressed: () => _isLoading ? null : _signInWithGoogle(),
+                    onPressed: _isLoading ? () {} : _signInWithGoogle,
                     text: 'Continuar com Google',
                   ),
                   const SizedBox(height: 24),
@@ -312,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _isLogin ? 'Nao tem uma conta?' : 'Ja tem uma conta?',
+                        _isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       TextButton(

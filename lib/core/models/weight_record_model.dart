@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
-class WeightRecordModel {
+class WeightRecordModel extends Equatable {
   final String id;
   final String userId;
   final double weight;
   final DateTime date;
   final DateTime createdAt;
 
-  WeightRecordModel({
+  const WeightRecordModel({
     required this.id,
     required this.userId,
     required this.weight,
@@ -50,4 +51,7 @@ class WeightRecordModel {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  @override
+  List<Object?> get props => [id, userId, weight, date, createdAt];
 }
