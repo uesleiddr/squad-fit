@@ -35,17 +35,22 @@ class DeepLinkService {
   }
 
   void _handleDeepLink(Uri uri) {
-    debugPrint('Deep link recebido: $uri');
-
     // Formato esperado: squadfit://join/CODIGO ou https://squadfit.app/join/CODIGO
     final pathSegments = uri.pathSegments;
 
-    if (pathSegments.isNotEmpty && pathSegments.first == 'join') {
-      if (pathSegments.length > 1) {
-        final inviteCode = pathSegments[1].toUpperCase();
-        debugPrint('Código de convite extraído: $inviteCode');
-        onInviteCodeReceived?.call(inviteCode);
-      }
+    // Para scheme customizado (squadfit://join/CODE), o "join" pode vir como host
+    String? inviteCode;
+
+    if (uri.host == 'join' && pathSegments.isNotEmpty) {
+      // squadfit://join/CODE -> host="join", pathSegments=["CODE"]
+      inviteCode = pathSegments.first.toUpperCase();
+    } else if (pathSegments.isNotEmpty && pathSegments.first == 'join' && pathSegments.length > 1) {
+      // https://domain.com/join/CODE -> pathSegments=["join", "CODE"]
+      inviteCode = pathSegments[1].toUpperCase();
+    }
+
+    if (inviteCode != null) {
+      onInviteCodeReceived?.call(inviteCode);
     }
   }
 
