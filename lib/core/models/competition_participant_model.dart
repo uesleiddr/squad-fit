@@ -1,8 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
-enum ParticipantStatus { active, removed }
+enum ParticipantStatus {
+  active,    // Participando ativamente
+  removed,   // Saiu/foi removido (pode entrar novamente)
+  archived,  // Competição encerrada e arquivada (histórico)
+}
 
-class CompetitionParticipantModel {
+class CompetitionParticipantModel extends Equatable {
   final String id;
   final String competitionId;
   final String userId;
@@ -10,7 +15,7 @@ class CompetitionParticipantModel {
   final DateTime joinedAt;
   final ParticipantStatus status;
 
-  CompetitionParticipantModel({
+  const CompetitionParticipantModel({
     required this.id,
     required this.competitionId,
     required this.userId,
@@ -27,12 +32,22 @@ class CompetitionParticipantModel {
 
   factory CompetitionParticipantModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final now = DateTime.now();
+
+    // Helper para converter Timestamp com null safety
+    DateTime parseTimestamp(dynamic value, DateTime fallback) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return fallback;
+    }
+
     return CompetitionParticipantModel(
       id: doc.id,
       competitionId: data['competitionId'] ?? '',
       userId: data['userId'] ?? '',
       initialWeight: data['initialWeight']?.toDouble() ?? 0.0,
-      joinedAt: (data['joinedAt'] as Timestamp).toDate(),
+      joinedAt: parseTimestamp(data['joinedAt'], now),
       status: ParticipantStatus.values.firstWhere(
         (e) => e.name == data['status'],
         orElse: () => ParticipantStatus.active,
@@ -67,4 +82,14 @@ class CompetitionParticipantModel {
       status: status ?? this.status,
     );
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        competitionId,
+        userId,
+        initialWeight,
+        joinedAt,
+        status,
+      ];
 }

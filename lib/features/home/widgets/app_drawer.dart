@@ -1,30 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
+import '../../competition/screens/competition_screen.dart';
 import '../../weight/screens/add_weight_screen.dart';
 import '../../weight/screens/weight_history_screen.dart';
 
 class AppDrawer extends StatelessWidget {
-  final VoidCallback? onClose;
-
-  const AppDrawer({super.key, this.onClose});
+  const AppDrawer({super.key});
 
   void _handleTap(BuildContext context) {
-    if (onClose != null) {
-      onClose!();
-    } else {
-      Navigator.pop(context);
-    }
+    Navigator.pop(context);
   }
 
   Future<void> _handleSignOut() async {
-    await AuthService().signOut();
+    await getIt<AuthService>().signOut();
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final userName = user?.displayName ?? 'Usuario';
+    final userName = user?.displayName ?? 'Usuário';
     final userEmail = user?.email ?? '';
     final userPhoto = user?.photoURL;
 
@@ -50,15 +46,23 @@ class AppDrawer extends StatelessWidget {
                         : null,
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    userName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      userName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
                   ),
-                  Text(
-                    userEmail,
-                    style: Theme.of(context).textTheme.bodySmall,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      userEmail,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
                 ],
               ),
@@ -86,8 +90,15 @@ class AppDrawer extends StatelessWidget {
             _DrawerItem(
               icon: Icons.emoji_events_outlined,
               selectedIcon: Icons.emoji_events,
-              title: 'Competições',
-              onTap: () => _handleTap(context),
+              title: 'Desafio',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CompetitionScreen()),
+                );
+              },
             ),
             _DrawerItem(
               icon: Icons.history_outlined,
@@ -100,12 +111,6 @@ class AppDrawer extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
                 );
               },
-            ),
-            _DrawerItem(
-              icon: Icons.leaderboard_outlined,
-              selectedIcon: Icons.leaderboard,
-              title: 'Ranking',
-              onTap: () => _handleTap(context),
             ),
             const Divider(indent: 16, endIndent: 16),
             _DrawerItem(

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'login_screen.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/services/user_service.dart';
 import '../../home/screens/home_screen.dart';
 import '../../profile/screens/profile_setup_screen.dart';
-import '../../../core/services/user_service.dart';
+import 'login_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -34,57 +35,35 @@ class AuthWrapper extends StatelessWidget {
   }
 }
 
-class _ProfileChecker extends StatefulWidget {
+class _ProfileChecker extends StatelessWidget {
   const _ProfileChecker();
 
   @override
-  State<_ProfileChecker> createState() => _ProfileCheckerState();
-}
-
-class _ProfileCheckerState extends State<_ProfileChecker> {
-  final _userService = UserService();
-  bool _isLoading = true;
-  bool _hasProfile = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkProfile();
-  }
-
-  Future<void> _checkProfile() async {
-    try {
-      final hasProfile = await _userService.hasCompletedProfile();
-      if (mounted) {
-        setState(() {
-          _hasProfile = hasProfile;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasProfile = false;
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
+    final userService = getIt<UserService>();
 
-    if (_hasProfile) {
-      return const HomeScreen();
-    }
+    return StreamBuilder(
+      stream: userService.getCurrentUserStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
 
-    return const ProfileSetupScreen();
+        final user = snapshot.data;
+        final hasProfile = user != null &&
+            user.firstName.isNotEmpty &&
+            user.initialWeight != null;
+
+        if (hasProfile) {
+          return const HomeScreen();
+        }
+
+        return const ProfileSetupScreen();
+      },
+    );
   }
 }

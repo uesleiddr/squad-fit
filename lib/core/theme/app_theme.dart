@@ -97,5 +97,4 @@ class AppTheme {
     ),
   );
 
-  static ThemeData darkTheme = lightTheme;
 }
