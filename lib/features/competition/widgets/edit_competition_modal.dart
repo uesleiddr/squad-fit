@@ -3,6 +3,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class EditCompetitionModal extends StatefulWidget {
   final CompetitionModel competition;
@@ -88,12 +89,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Não foi possível atualizar o desafio. Tente novamente.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackBarHelper.showError(context, 'Não foi possível atualizar o desafio. Tente novamente.');
       }
     } finally {
       if (mounted) {

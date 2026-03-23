@@ -76,19 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             stream: _competitionService.getMyCompetitionsStream(),
             builder: (context, snapshot) {
               final competitions = snapshot.data ?? [];
-
-              // Prioriza competição ativa, mas mostra encerrada se não houver ativa
-              final activeCompetition = competitions
-                  .where((c) => !c.hasEnded)
-                  .toList()
-                  .firstOrNull;
-
-              final endedCompetition = competitions
-                  .where((c) => c.hasEnded)
-                  .toList()
-                  .firstOrNull;
-
-              final currentCompetition = activeCompetition ?? endedCompetition;
+              final currentCompetition = _competitionService.getCurrentCompetition(competitions);
 
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),

@@ -3,6 +3,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class CreateCompetitionModal extends StatefulWidget {
   const CreateCompetitionModal({super.key});
@@ -61,34 +62,19 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecione a data de termino'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackBarHelper.showError(context, 'Selecione a data de término');
       return;
     }
 
     final today = DateTime.now();
     final todayOnly = DateTime(today.year, today.month, today.day);
     if (_endDate!.isBefore(todayOnly) || _endDate!.isAtSameMomentAs(todayOnly)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A data de termino deve ser no futuro'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackBarHelper.showError(context, 'A data de término deve ser no futuro');
       return;
     }
 
     if (_selectedRule == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecione a regra de vitoria'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackBarHelper.showError(context, 'Selecione a regra de vitória');
       return;
     }
 
@@ -110,12 +96,7 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Não foi possível criar o desafio. Tente novamente.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackBarHelper.showError(context, 'Não foi possível criar o desafio. Tente novamente.');
       }
     } finally {
       if (mounted) {

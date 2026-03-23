@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/services/user_service.dart';
+import '../../../core/services/weight_service.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/utils/validators.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -14,6 +17,7 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userService = getIt<UserService>();
+  final _weightService = getIt<WeightService>();
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -79,6 +83,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
+      final initialWeight = double.tryParse(
+        _initialWeightController.text.replaceAll(',', '.'),
+      );
 
       await _userService.createUser(
         firstName: _firstNameController.text.trim(),
@@ -86,10 +93,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         email: user?.email ?? '',
         photoUrl: user?.photoURL,
         height: int.tryParse(_heightController.text),
-        initialWeight: double.tryParse(_initialWeightController.text.replaceAll(',', '.')),
+        initialWeight: initialWeight,
         goalWeight: double.tryParse(_goalWeightController.text.replaceAll(',', '.')),
         birthDate: _birthDate,
       );
+
+      // Cria o primeiro registro de peso no histórico
+      if (initialWeight != null) {
+        await _weightService.addWeight(initialWeight);
+      }
 
       if (mounted) {
         // Volta para o AuthWrapper que vai detectar o perfil completo
@@ -97,11 +109,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Não foi possível salvar o perfil. Tente novamente.'),
-            backgroundColor: Colors.red,
-          ),
+        SnackBarHelper.showError(
+          context,
+          'Não foi possível salvar o perfil. Tente novamente.',
         );
       }
     } finally {
@@ -216,16 +226,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     hintText: 'Ex: 85.5',
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Informe seu peso atual';
-                    }
-                    final weight = double.tryParse(value.replaceAll(',', '.'));
-                    if (weight == null || weight <= 0) {
-                      return 'Peso inválido';
-                    }
-                    return null;
-                  },
+                  validator: (value) => Validators.validateWeight(value),
                 ),
                 const SizedBox(height: 16),
 

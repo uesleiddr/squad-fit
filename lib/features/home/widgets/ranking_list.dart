@@ -3,6 +3,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/models/ranking_entry_model.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class RankingList extends StatefulWidget {
   final CompetitionModel? competition;
@@ -351,21 +352,11 @@ class _RankingListState extends State<RankingList> {
       try {
         await _competitionService.archiveCompetition(widget.competition!.id);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Desafio arquivado com sucesso'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          SnackBarHelper.showSuccess(context, 'Desafio arquivado com sucesso');
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Não foi possível arquivar o desafio. Tente novamente.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          SnackBarHelper.showError(context, 'Não foi possível arquivar o desafio. Tente novamente.');
         }
       }
     }

@@ -7,6 +7,7 @@ import '../../../core/services/competition_service.dart';
 import '../../../core/services/deep_link_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../home/widgets/ranking_list.dart';
 import '../widgets/create_competition_modal.dart';
 import '../widgets/edit_competition_modal.dart';
@@ -90,21 +91,11 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
       try {
         await _competitionService.deleteCompetition(competition.id);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Desafio excluído com sucesso'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          SnackBarHelper.showSuccess(context, 'Desafio excluído com sucesso');
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Não foi possível excluir o desafio. Tente novamente.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          SnackBarHelper.showError(context, 'Não foi possível excluir o desafio. Tente novamente.');
         }
       }
     }
@@ -178,21 +169,11 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
       try {
         await _competitionService.leaveCompetition(competition.id);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Você saiu do desafio'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          SnackBarHelper.showSuccess(context, 'Você saiu do desafio');
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Não foi possível sair do desafio. Tente novamente.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          SnackBarHelper.showError(context, 'Não foi possível sair do desafio. Tente novamente.');
         }
       }
     }
@@ -205,12 +186,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
     final result = await EditCompetitionModal.show(context, competition);
 
     if (result == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Desafio atualizado com sucesso'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackBarHelper.showSuccess(context, 'Desafio atualizado com sucesso');
     }
   }
 
@@ -220,19 +196,12 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
       stream: _competitionService.getMyCompetitionsStream(),
       builder: (context, snapshot) {
         final competitions = snapshot.data ?? [];
+        final currentCompetition = _competitionService.getCurrentCompetition(competitions);
 
-        // Prioriza competição ativa, mas mostra encerrada se não houver ativa
-        final activeCompetition = competitions
-            .where((c) => !c.hasEnded)
-            .toList()
-            .firstOrNull;
-
-        final endedCompetition = competitions
-            .where((c) => c.hasEnded)
-            .toList()
-            .firstOrNull;
-
-        final currentCompetition = activeCompetition ?? endedCompetition;
+        // Verifica se é competição ativa para exibir ações específicas
+        final activeCompetition = currentCompetition != null && !currentCompetition.hasEnded
+            ? currentCompetition
+            : null;
 
         final isAdmin = currentCompetition != null &&
             _competitionService.isCurrentUserAdmin(currentCompetition.adminId);
@@ -276,7 +245,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
   Widget _buildBody(
     BuildContext context,
     AsyncSnapshot<List<CompetitionModel>> snapshot,
-    CompetitionModel? activeCompetition,
+    CompetitionModel? currentCompetition,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return const Center(child: CircularProgressIndicator());
@@ -288,7 +257,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
       );
     }
 
-    if (activeCompetition == null) {
+    if (currentCompetition == null) {
       return _EmptyState(
         onCreatePressed: () => _showCreateModal(context),
         onJoinWithCode: () => _showJoinModal(context),
@@ -296,7 +265,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
     }
 
     return _CompetitionDetails(
-      competition: activeCompetition,
+      competition: currentCompetition,
     );
   }
 
@@ -304,12 +273,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
     final competition = await CreateCompetitionModal.show(context);
 
     if (competition != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Desafio criado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackBarHelper.showSuccess(context, 'Desafio criado com sucesso!');
     }
   }
 
@@ -427,13 +391,7 @@ class _CompetitionDetails extends StatelessWidget {
 
   void _copyCode(BuildContext context) {
     Clipboard.setData(ClipboardData(text: competition.inviteCode));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Código copiado!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
+    SnackBarHelper.showSuccess(context, 'Código copiado!');
   }
 
   Future<void> _shareWhatsApp(BuildContext context) async {
@@ -450,12 +408,9 @@ class _CompetitionDetails extends StatelessWidget {
       await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível abrir o WhatsApp. '
-                'Verifique se o app está instalado.'),
-            backgroundColor: Colors.red,
-          ),
+        SnackBarHelper.showError(
+          context,
+          'Não foi possível abrir o WhatsApp. Verifique se o app está instalado.',
         );
       }
     }

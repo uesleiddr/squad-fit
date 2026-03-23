@@ -18,12 +18,22 @@ class WeightRecordModel extends Equatable {
 
   factory WeightRecordModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final now = DateTime.now();
+
+    // Helper para converter Timestamp com null safety
+    DateTime parseTimestamp(dynamic value, DateTime fallback) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return fallback;
+    }
+
     return WeightRecordModel(
       id: doc.id,
       userId: data['userId'] ?? '',
       weight: data['weight']?.toDouble() ?? 0.0,
-      date: (data['date'] as Timestamp).toDate(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      date: parseTimestamp(data['date'], now),
+      createdAt: parseTimestamp(data['createdAt'], now),
     );
   }
 

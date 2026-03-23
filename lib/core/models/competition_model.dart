@@ -45,20 +45,30 @@ class CompetitionModel extends Equatable {
 
   factory CompetitionModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final now = DateTime.now();
+
+    // Helper para converter Timestamp com null safety
+    DateTime parseTimestamp(dynamic value, DateTime fallback) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return fallback;
+    }
+
     return CompetitionModel(
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'],
       adminId: data['adminId'] ?? '',
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
+      startDate: parseTimestamp(data['startDate'], now),
+      endDate: parseTimestamp(data['endDate'], now.add(const Duration(days: 30))),
       inviteCode: data['inviteCode'] ?? '',
       victoryRule: VictoryRule.values.firstWhere(
         (e) => e.name == data['victoryRule'],
         orElse: () => VictoryRule.totalWeightLoss,
       ),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: parseTimestamp(data['createdAt'], now),
+      updatedAt: parseTimestamp(data['updatedAt'], now),
     );
   }
 

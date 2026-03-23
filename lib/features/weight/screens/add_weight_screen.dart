@@ -3,6 +3,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class AddWeightScreen extends StatefulWidget {
   const AddWeightScreen({super.key});
@@ -56,22 +57,12 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
       await _weightService.addWeight(weight, date: _selectedDate);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Peso registrado com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        SnackBarHelper.showSuccess(context, 'Peso registrado com sucesso!');
         Navigator.of(context).pop(true); // Retorna true para indicar sucesso
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Não foi possível registrar o peso. Tente novamente.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackBarHelper.showError(context, 'Não foi possível registrar o peso. Tente novamente.');
       }
     } finally {
       if (mounted) {

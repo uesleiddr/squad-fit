@@ -1,4 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'core/constants/app_constants.dart';
+import 'core/exceptions/app_exceptions.dart';
 import 'core/theme/app_theme.dart';
 import 'core/di/service_locator.dart';
 import 'core/services/deep_link_service.dart';
@@ -6,6 +9,7 @@ import 'core/services/competition_service.dart';
 import 'core/services/weight_service.dart';
 import 'core/services/user_service.dart';
 import 'core/utils/invite_code_validator.dart';
+import 'core/utils/snackbar_helper.dart';
 import 'features/auth/screens/auth_wrapper.dart';
 import 'features/home/screens/home_screen.dart';
 
@@ -34,8 +38,16 @@ class _SquadFitAppState extends State<SquadFitApp> {
 
   void _handleInviteCode(String inviteCode) {
     // Aguarda um pouco para garantir que o app está pronto
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(AppConstants.deepLinkDelay, () {
       if (!mounted) return;
+
+      // Verifica se usuário está autenticado antes de mostrar dialog
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        // Salva o código para usar depois do login (opcional: implementar)
+        return;
+      }
+
       final ctx = navigatorKey.currentContext;
       if (ctx != null && ctx.mounted) {
         _showJoinConfirmationDialog(ctx, inviteCode);
@@ -160,12 +172,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
     // Valida o código antes de tentar entrar
     if (!InviteCodeValidator.isValid(widget.inviteCode)) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Código de convite inválido'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackBarHelper.showError(context, 'Código de convite inválido');
       return;
     }
 
@@ -186,33 +193,24 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
       if (!mounted) return;
       Navigator.pop(context);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Você entrou no desafio com sucesso!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
-      );
+      SnackBarHelper.showSuccess(context, 'Você entrou no desafio com sucesso!');
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
 
-      String errorMessage = 'Erro ao entrar no desafio';
-      final errorStr = e.toString().toLowerCase();
-      if (errorStr.contains('não encontrada') || errorStr.contains('nao encontrada')) {
-        errorMessage = 'Código de convite inválido';
-      } else if (errorStr.contains('ja esta') || errorStr.contains('já está') || errorStr.contains('já participa')) {
-        errorMessage = 'Você já está neste desafio';
-      } else if (errorStr.contains('registrar seu peso')) {
-        errorMessage = e.toString().replaceAll('Exception: ', '');
+      // Usa tratamento baseado em tipo de exceção
+      String errorMessage;
+      if (e is CompetitionException) {
+        errorMessage = e.message;
+      } else if (e is WeightException) {
+        errorMessage = e.message;
+      } else if (e is AuthException) {
+        errorMessage = 'Você precisa estar logado para entrar em um desafio';
+      } else {
+        errorMessage = 'Erro ao entrar no desafio. Tente novamente.';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackBarHelper.showError(context, errorMessage);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

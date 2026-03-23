@@ -32,12 +32,22 @@ class CompetitionParticipantModel extends Equatable {
 
   factory CompetitionParticipantModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final now = DateTime.now();
+
+    // Helper para converter Timestamp com null safety
+    DateTime parseTimestamp(dynamic value, DateTime fallback) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return fallback;
+    }
+
     return CompetitionParticipantModel(
       id: doc.id,
       competitionId: data['competitionId'] ?? '',
       userId: data['userId'] ?? '',
       initialWeight: data['initialWeight']?.toDouble() ?? 0.0,
-      joinedAt: (data['joinedAt'] as Timestamp).toDate(),
+      joinedAt: parseTimestamp(data['joinedAt'], now),
       status: ParticipantStatus.values.firstWhere(
         (e) => e.name == data['status'],
         orElse: () => ParticipantStatus.active,

@@ -4,6 +4,7 @@ import '../../../core/models/weight_record_model.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import 'add_weight_screen.dart';
 
 class WeightHistoryScreen extends StatefulWidget {
@@ -42,21 +43,11 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       try {
         await _weightService.deleteWeight(record.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Registro excluído'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          SnackBarHelper.showSuccess(context, 'Registro excluído');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Não foi possível excluir o registro. Tente novamente.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          SnackBarHelper.showError(context, 'Não foi possível excluir o registro. Tente novamente.');
         }
       }
     }

@@ -43,6 +43,23 @@ class UserModel extends Equatable {
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final now = DateTime.now();
+
+    // Helper para converter Timestamp com null safety
+    DateTime? parseTimestampNullable(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return null;
+    }
+
+    DateTime parseTimestamp(dynamic value, DateTime fallback) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return fallback;
+    }
+
     return UserModel(
       id: doc.id,
       firstName: data['firstName'] ?? '',
@@ -52,11 +69,9 @@ class UserModel extends Equatable {
       initialWeight: data['initialWeight']?.toDouble(),
       goalWeight: data['goalWeight']?.toDouble(),
       height: data['height'],
-      birthDate: data['birthDate'] != null
-          ? (data['birthDate'] as Timestamp).toDate()
-          : null,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      birthDate: parseTimestampNullable(data['birthDate']),
+      createdAt: parseTimestamp(data['createdAt'], now),
+      updatedAt: parseTimestamp(data['updatedAt'], now),
     );
   }
 

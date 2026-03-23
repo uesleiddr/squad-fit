@@ -5,6 +5,8 @@ import '../../../core/di/service_locator.dart';
 import '../services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/utils/validators.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -106,12 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authService.resetPassword(email);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email de recuperação enviado!'),
-            backgroundColor: AppTheme.secondaryColor,
-          ),
-        );
+        SnackBarHelper.showSuccess(context, 'Email de recuperação enviado!');
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -212,15 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Email',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Digite seu email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Email inválido';
-                      }
-                      return null;
-                    },
+                    validator: Validators.validateEmail,
                   ),
                   const SizedBox(height: 16),
 
@@ -244,15 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Digite sua senha';
-                      }
-                      if (value.length < 6) {
-                        return 'A senha deve ter pelo menos 6 caracteres';
-                      }
-                      return null;
-                    },
+                    validator: Validators.validatePassword,
                   ),
                   const SizedBox(height: 8),
 
