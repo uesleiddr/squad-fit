@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../exceptions/app_exceptions.dart';
 import '../models/weight_record_model.dart';
+import '../utils/validators.dart';
 
 class WeightService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -13,11 +15,11 @@ class WeightService {
   Future<WeightRecordModel> addWeight(double weight, {DateTime? date}) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuário não autenticado');
+      throw AuthException.notAuthenticated;
     }
 
-    if (weight <= 0 || weight > 500) {
-      throw Exception('Peso inválido');
+    if (!Validators.isValidWeight(weight)) {
+      throw ValidationException.invalidWeight;
     }
 
     final now = DateTime.now();
@@ -90,7 +92,7 @@ class WeightService {
     if (initialWeight != null) {
       return initialWeight;
     }
-    throw Exception('Você precisa registrar seu peso primeiro');
+    throw WeightException.noWeightRegistered;
   }
 
   /// Busca registros de peso de um usuário em um período
@@ -158,16 +160,16 @@ class WeightService {
   Future<void> deleteWeight(String recordId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuário não autenticado');
+      throw AuthException.notAuthenticated;
     }
 
     final doc = await _weightsCollection.doc(recordId).get();
     if (!doc.exists) {
-      throw Exception('Registro não encontrado');
+      throw WeightException.notFound;
     }
 
     if (doc.data()?['userId'] != authUser.uid) {
-      throw Exception('Sem permissão para deletar este registro');
+      throw WeightException.noPermission;
     }
 
     await _weightsCollection.doc(recordId).delete();
@@ -177,20 +179,20 @@ class WeightService {
   Future<void> updateWeight(String recordId, double newWeight) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuário não autenticado');
+      throw AuthException.notAuthenticated;
     }
 
-    if (newWeight <= 0 || newWeight > 500) {
-      throw Exception('Peso inválido');
+    if (!Validators.isValidWeight(newWeight)) {
+      throw ValidationException.invalidWeight;
     }
 
     final doc = await _weightsCollection.doc(recordId).get();
     if (!doc.exists) {
-      throw Exception('Registro não encontrado');
+      throw WeightException.notFound;
     }
 
     if (doc.data()?['userId'] != authUser.uid) {
-      throw Exception('Sem permissão para atualizar este registro');
+      throw WeightException.noPermission;
     }
 
     await _weightsCollection.doc(recordId).update({

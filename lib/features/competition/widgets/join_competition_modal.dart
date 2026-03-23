@@ -4,6 +4,7 @@ import '../../../core/services/competition_service.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/utils/invite_code_validator.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class JoinCompetitionModal extends StatefulWidget {
   const JoinCompetitionModal({super.key});
@@ -36,22 +37,12 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
   Future<void> _joinCompetition() async {
     final code = InviteCodeValidator.normalize(_codeController.text);
     if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Digite o código de convite'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackBarHelper.showError(context, 'Digite o código de convite');
       return;
     }
 
     if (!InviteCodeValidator.isValid(code)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Código inválido. Deve ter 8 caracteres alfanuméricos'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackBarHelper.showError(context, 'Código inválido. Deve ter 8 caracteres alfanuméricos');
       return;
     }
 
@@ -70,21 +61,11 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
 
       if (mounted) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Você entrou no desafio!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        SnackBarHelper.showSuccess(context, 'Você entrou no desafio!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Não foi possível entrar no desafio. Verifique o código e tente novamente.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackBarHelper.showError(context, 'Não foi possível entrar no desafio. Verifique o código e tente novamente.');
       }
     } finally {
       if (mounted) {
