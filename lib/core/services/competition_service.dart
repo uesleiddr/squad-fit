@@ -1,11 +1,21 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../constants/app_constants.dart';
+import '../exceptions/app_exceptions.dart';
 import '../models/models.dart';
+import '../di/service_locator.dart';
+import 'weight_service.dart';
+import 'user_service.dart';
 
 class CompetitionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Usa DI para serviços dependentes
+  WeightService get _weightService => getIt<WeightService>();
+  UserService get _userService => getIt<UserService>();
 
   CollectionReference<Map<String, dynamic>> get _competitionsCollection =>
       _firestore.collection('competitions');
@@ -13,27 +23,45 @@ class CompetitionService {
   CollectionReference<Map<String, dynamic>> get _participantsCollection =>
       _firestore.collection('competitionParticipants');
 
-  /// Gera um código de convite único
-  String _generateInviteCode() {
+  String _generateRandomCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random.secure();
-    return List.generate(8, (_) => chars[random.nextInt(chars.length)]).join();
+    return List.generate(
+      AppConstants.inviteCodeLength,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
   }
 
-  /// Cria uma nova competição
+  /// Gera um código de convite único, verificando se já existe no banco
+  Future<String> _generateUniqueInviteCode() async {
+    for (var attempt = 0; attempt < AppConstants.maxInviteCodeAttempts; attempt++) {
+      final code = _generateRandomCode();
+      final existing = await _competitionsCollection
+          .where('inviteCode', isEqualTo: code)
+          .limit(1)
+          .get();
+
+      if (existing.docs.isEmpty) {
+        return code;
+      }
+    }
+    throw CompetitionException.inviteCodeExists;
+  }
+
   Future<CompetitionModel> createCompetition({
     required String name,
     String? description,
     required DateTime startDate,
     required DateTime endDate,
+    required VictoryRule victoryRule,
   }) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw AuthException.notAuthenticated;
     }
 
     final now = DateTime.now();
-    final inviteCode = _generateInviteCode();
+    final inviteCode = await _generateUniqueInviteCode();
 
     final docRef = _competitionsCollection.doc();
     final competition = CompetitionModel(
@@ -44,26 +72,28 @@ class CompetitionService {
       startDate: startDate,
       endDate: endDate,
       inviteCode: inviteCode,
+      victoryRule: victoryRule,
       createdAt: now,
       updatedAt: now,
     );
 
     await docRef.set(competition.toFirestore());
 
-    // Admin automaticamente entra como participante
-    await joinCompetition(competition.id, currentWeight: 0);
+    final latestWeight = await _weightService.getLatestWeight();
+    final user = await _userService.getCurrentUser();
+    final currentWeight = latestWeight?.weight ?? user?.initialWeight ?? 0;
+
+    await joinCompetition(competition.id, currentWeight: currentWeight);
 
     return competition;
   }
 
-  /// Busca uma competição pelo ID
   Future<CompetitionModel?> getCompetitionById(String competitionId) async {
     final doc = await _competitionsCollection.doc(competitionId).get();
     if (!doc.exists) return null;
     return CompetitionModel.fromFirestore(doc);
   }
 
-  /// Busca uma competição pelo código de convite
   Future<CompetitionModel?> getCompetitionByInviteCode(String inviteCode) async {
     final snapshot = await _competitionsCollection
         .where('inviteCode', isEqualTo: inviteCode.toUpperCase())
@@ -74,27 +104,29 @@ class CompetitionService {
     return CompetitionModel.fromFirestore(snapshot.docs.first);
   }
 
-  /// Entra em uma competição usando código de convite
   Future<void> joinCompetitionByCode(String inviteCode, {required double currentWeight}) async {
     final competition = await getCompetitionByInviteCode(inviteCode);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw CompetitionException.notFound;
     }
 
-    await joinCompetition(competition.id, currentWeight: currentWeight);
+    final weightRecord = await _weightService.getWeightForDate(
+      targetDate: competition.startDate,
+    );
+
+    final initialWeight = weightRecord?.weight ?? currentWeight;
+    await joinCompetition(competition.id, currentWeight: initialWeight);
   }
 
-  /// Entra em uma competição
   Future<CompetitionParticipantModel> joinCompetition(
     String competitionId, {
     required double currentWeight,
   }) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw AuthException.notAuthenticated;
     }
 
-    // Verifica se já é participante
     final existing = await _participantsCollection
         .where('competitionId', isEqualTo: competitionId)
         .where('userId', isEqualTo: authUser.uid)
@@ -102,7 +134,19 @@ class CompetitionService {
         .get();
 
     if (existing.docs.isNotEmpty) {
-      throw Exception('Voce ja esta nesta competicao');
+      final existingParticipant = CompetitionParticipantModel.fromFirestore(existing.docs.first);
+
+      if (existingParticipant.status == ParticipantStatus.active) {
+        throw CompetitionException.alreadyParticipating;
+      }
+
+      final updatedParticipant = existingParticipant.copyWith(
+        status: ParticipantStatus.active,
+        initialWeight: currentWeight,
+        joinedAt: DateTime.now(),
+      );
+      await _participantsCollection.doc(existingParticipant.id).update(updatedParticipant.toFirestore());
+      return updatedParticipant;
     }
 
     final docRef = _participantsCollection.doc();
@@ -119,12 +163,10 @@ class CompetitionService {
     return participant;
   }
 
-  /// Lista competições do usuário atual
   Future<List<CompetitionModel>> getMyCompetitions() async {
     final authUser = _auth.currentUser;
     if (authUser == null) return [];
 
-    // Busca participações do usuário
     final participations = await _participantsCollection
         .where('userId', isEqualTo: authUser.uid)
         .where('status', isEqualTo: ParticipantStatus.active.name)
@@ -132,19 +174,32 @@ class CompetitionService {
 
     if (participations.docs.isEmpty) return [];
 
-    // Busca as competições correspondentes
     final competitionIds = participations.docs
         .map((doc) => doc.data()['competitionId'] as String)
         .toList();
 
-    final competitions = await Future.wait(
-      competitionIds.map((id) => getCompetitionById(id)),
-    );
-
-    return competitions.whereType<CompetitionModel>().toList();
+    return _getCompetitionsByIds(competitionIds);
   }
 
-  /// Stream das competições do usuário (tempo real)
+  Future<List<CompetitionModel>> _getCompetitionsByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    final List<CompetitionModel> results = [];
+
+    for (var i = 0; i < ids.length; i += 30) {
+      final batch = ids.skip(i).take(30).toList();
+      final snapshot = await _competitionsCollection
+          .where(FieldPath.documentId, whereIn: batch)
+          .get();
+
+      results.addAll(
+        snapshot.docs.map((doc) => CompetitionModel.fromFirestore(doc)),
+      );
+    }
+
+    return results;
+  }
+
   Stream<List<CompetitionModel>> getMyCompetitionsStream() {
     final authUser = _auth.currentUser;
     if (authUser == null) return Stream.value([]);
@@ -160,15 +215,10 @@ class CompetitionService {
           .map((doc) => doc.data()['competitionId'] as String)
           .toList();
 
-      final competitions = await Future.wait(
-        competitionIds.map((id) => getCompetitionById(id)),
-      );
-
-      return competitions.whereType<CompetitionModel>().toList();
+      return _getCompetitionsByIds(competitionIds);
     });
   }
 
-  /// Lista participantes de uma competição
   Future<List<CompetitionParticipantModel>> getCompetitionParticipants(
     String competitionId,
   ) async {
@@ -182,7 +232,6 @@ class CompetitionService {
         .toList();
   }
 
-  /// Atualiza dados da competição (apenas admin)
   Future<void> updateCompetition(
     String competitionId, {
     String? name,
@@ -192,16 +241,16 @@ class CompetitionService {
   }) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw AuthException.notAuthenticated;
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw CompetitionException.notFound;
     }
 
     if (competition.adminId != authUser.uid) {
-      throw Exception('Apenas o administrador pode editar a competicao');
+      throw CompetitionException.adminOnly;
     }
 
     final updates = <String, dynamic>{
@@ -216,27 +265,26 @@ class CompetitionService {
     await _competitionsCollection.doc(competitionId).update(updates);
   }
 
-  /// Remove um participante da competição (apenas admin)
   Future<void> removeParticipant(
     String competitionId,
     String participantUserId,
   ) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw AuthException.notAuthenticated;
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw CompetitionException.notFound;
     }
 
     if (competition.adminId != authUser.uid) {
-      throw Exception('Apenas o administrador pode remover participantes');
+      throw CompetitionException.adminOnly;
     }
 
     if (participantUserId == authUser.uid) {
-      throw Exception('O administrador nao pode se remover da competicao');
+      throw CompetitionException.adminCannotBeRemoved;
     }
 
     final participantDoc = await _participantsCollection
@@ -252,20 +300,19 @@ class CompetitionService {
     }
   }
 
-  /// Sai de uma competição
   Future<void> leaveCompetition(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw AuthException.notAuthenticated;
     }
 
     final competition = await getCompetitionById(competitionId);
     if (competition == null) {
-      throw Exception('Competicao nao encontrada');
+      throw CompetitionException.notFound;
     }
 
     if (competition.adminId == authUser.uid) {
-      throw Exception('O administrador nao pode sair da competicao');
+      throw CompetitionException.adminCannotLeave;
     }
 
     final participantDoc = await _participantsCollection
@@ -281,12 +328,263 @@ class CompetitionService {
     }
   }
 
-  /// Verifica se o usuário é admin de uma competição
+  Future<void> archiveCompetition(String competitionId) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) {
+      throw AuthException.notAuthenticated;
+    }
+
+    final competition = await getCompetitionById(competitionId);
+    if (competition == null) {
+      throw CompetitionException.notFound;
+    }
+
+    if (!competition.hasEnded) {
+      throw CompetitionException.notEnded;
+    }
+
+    final participantDoc = await _participantsCollection
+        .where('competitionId', isEqualTo: competitionId)
+        .where('userId', isEqualTo: authUser.uid)
+        .limit(1)
+        .get();
+
+    if (participantDoc.docs.isNotEmpty) {
+      await _participantsCollection.doc(participantDoc.docs.first.id).update({
+        'status': ParticipantStatus.archived.name,
+      });
+    }
+  }
+
   Future<bool> isAdmin(String competitionId) async {
     final authUser = _auth.currentUser;
     if (authUser == null) return false;
 
     final competition = await getCompetitionById(competitionId);
     return competition?.adminId == authUser.uid;
+  }
+
+  bool isCurrentUserAdmin(String adminId) {
+    final authUser = _auth.currentUser;
+    if (authUser == null) return false;
+    return authUser.uid == adminId;
+  }
+
+  /// Seleciona a competição atual do usuário.
+  /// Prioriza competição ativa, mas retorna encerrada se não houver ativa.
+  CompetitionModel? getCurrentCompetition(List<CompetitionModel> competitions) {
+    if (competitions.isEmpty) return null;
+
+    // Prioriza competição ativa
+    final activeCompetition = competitions
+        .where((c) => !c.hasEnded)
+        .toList();
+
+    if (activeCompetition.isNotEmpty) {
+      // Retorna a mais recente (por data de início)
+      activeCompetition.sort((a, b) => b.startDate.compareTo(a.startDate));
+      return activeCompetition.first;
+    }
+
+    // Se não há ativa, retorna a encerrada mais recente
+    final endedCompetitions = competitions
+        .where((c) => c.hasEnded)
+        .toList();
+
+    if (endedCompetitions.isNotEmpty) {
+      endedCompetitions.sort((a, b) => b.endDate.compareTo(a.endDate));
+      return endedCompetitions.first;
+    }
+
+    return null;
+  }
+
+  /// Obtém o ranking de uma competição (OTIMIZADO - batch fetch)
+  Future<List<RankingEntryModel>> getCompetitionRanking(
+    String competitionId,
+  ) async {
+    final authUser = _auth.currentUser;
+    final competition = await getCompetitionById(competitionId);
+    if (competition == null) return [];
+
+    final participants = await getCompetitionParticipants(competitionId);
+    if (participants.isEmpty) return [];
+
+    // Coleta todos os userIds para batch fetch
+    final userIds = participants.map((p) => p.userId).toList();
+
+    // Batch fetch: busca todos os usuários e pesos de uma vez
+    final usersMap = await _userService.getUsersByIds(userIds);
+    final weightsMap = await _weightService.getLatestWeightsForUsers(userIds);
+
+    final List<RankingEntryModel> rankings = [];
+
+    for (final participant in participants) {
+      final user = usersMap[participant.userId];
+      if (user == null) continue;
+
+      final latestWeight = weightsMap[participant.userId];
+
+      final initialWeight = participant.initialWeight > 0
+          ? participant.initialWeight
+          : user.initialWeight ?? 0;
+
+      final currentWeight = latestWeight?.weight ?? initialWeight;
+
+      final weightLost = initialWeight - currentWeight;
+      final percentageLost = initialWeight > 0
+          ? (weightLost / initialWeight) * 100
+          : 0.0;
+
+      rankings.add(RankingEntryModel(
+        position: 0,
+        userId: participant.userId,
+        userName: '${user.firstName} ${user.lastName}'.trim(),
+        userPhotoUrl: user.photoUrl,
+        initialWeight: initialWeight,
+        currentWeight: currentWeight,
+        weightLost: weightLost,
+        percentageLost: percentageLost,
+        isCurrentUser: participant.userId == authUser?.uid,
+      ));
+    }
+
+    // Ordena pelo critério da competição
+    if (competition.victoryRule == VictoryRule.percentageLoss) {
+      rankings.sort((a, b) => b.percentageLost.compareTo(a.percentageLost));
+    } else {
+      rankings.sort((a, b) => b.weightLost.compareTo(a.weightLost));
+    }
+
+    // Define posições
+    return rankings.asMap().entries.map((entry) {
+      final rank = entry.value;
+      return RankingEntryModel(
+        position: entry.key + 1,
+        userId: rank.userId,
+        userName: rank.userName,
+        userPhotoUrl: rank.userPhotoUrl,
+        initialWeight: rank.initialWeight,
+        currentWeight: rank.currentWeight,
+        weightLost: rank.weightLost,
+        percentageLost: rank.percentageLost,
+        isCurrentUser: rank.isCurrentUser,
+      );
+    }).toList();
+  }
+
+  /// Stream do ranking (CORRIGIDO - sem memory leak)
+  Stream<List<RankingEntryModel>> getCompetitionRankingStream(
+    String competitionId,
+  ) {
+    final controller = StreamController<List<RankingEntryModel>>.broadcast();
+
+    List<StreamSubscription> weightSubscriptions = [];
+    StreamSubscription? participantsSubscription;
+    bool isDisposed = false;
+    Timer? debounceTimer;
+
+    Future<void> refreshRanking() async {
+      if (isDisposed || controller.isClosed) return;
+
+      try {
+        final ranking = await getCompetitionRanking(competitionId);
+        if (!isDisposed && !controller.isClosed) {
+          controller.add(ranking);
+        }
+      } catch (e) {
+        if (!isDisposed && !controller.isClosed) {
+          controller.addError(e);
+        }
+      }
+    }
+
+    // Debounce para evitar múltiplas chamadas em sequência
+    void debouncedRefresh() {
+      debounceTimer?.cancel();
+      debounceTimer = Timer(AppConstants.rankingDebounce, refreshRanking);
+    }
+
+    void cleanupWeightSubscriptions() {
+      for (final sub in weightSubscriptions) {
+        sub.cancel();
+      }
+      weightSubscriptions = [];
+    }
+
+    void setupWeightListeners(List<String> participantUserIds) {
+      cleanupWeightSubscriptions();
+
+      if (isDisposed) return;
+
+      for (final userId in participantUserIds) {
+        final sub = _firestore
+            .collection('weightRecords')
+            .where('userId', isEqualTo: userId)
+            .snapshots()
+            .listen((_) => debouncedRefresh());
+        weightSubscriptions.add(sub);
+      }
+    }
+
+    participantsSubscription = _participantsCollection
+        .where('competitionId', isEqualTo: competitionId)
+        .where('status', isEqualTo: ParticipantStatus.active.name)
+        .snapshots()
+        .listen(
+      (snapshot) {
+        if (isDisposed) return;
+
+        final participantUserIds =
+            snapshot.docs.map((doc) => doc.data()['userId'] as String).toList();
+        setupWeightListeners(participantUserIds);
+        debouncedRefresh();
+      },
+      onError: (e) {
+        if (!isDisposed && !controller.isClosed) {
+          controller.addError(e);
+        }
+      },
+    );
+
+    controller.onCancel = () {
+      isDisposed = true;
+      debounceTimer?.cancel();
+      participantsSubscription?.cancel();
+      cleanupWeightSubscriptions();
+    };
+
+    return controller.stream;
+  }
+
+  Future<void> deleteCompetition(String competitionId) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) {
+      throw AuthException.notAuthenticated;
+    }
+
+    final competition = await getCompetitionById(competitionId);
+    if (competition == null) {
+      throw CompetitionException.notFound;
+    }
+
+    if (competition.adminId != authUser.uid) {
+      throw CompetitionException.adminOnly;
+    }
+
+    final participants = await _participantsCollection
+        .where('competitionId', isEqualTo: competitionId)
+        .get();
+
+    // Usa WriteBatch para garantir atomicidade da operação
+    final batch = _firestore.batch();
+
+    for (final doc in participants.docs) {
+      batch.delete(_participantsCollection.doc(doc.id));
+    }
+
+    batch.delete(_competitionsCollection.doc(competitionId));
+
+    await batch.commit();
   }
 }

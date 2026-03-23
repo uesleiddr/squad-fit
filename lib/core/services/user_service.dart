@@ -50,7 +50,7 @@ class UserService {
   }) async {
     final authUser = currentAuthUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final now = DateTime.now();
@@ -84,7 +84,7 @@ class UserService {
   }) async {
     final authUser = currentAuthUser;
     if (authUser == null) {
-      throw Exception('Usuario nao autenticado');
+      throw Exception('Usuário não autenticado');
     }
 
     final updates = <String, dynamic>{
@@ -109,5 +109,26 @@ class UserService {
 
     // Considera perfil completo se tem nome e peso inicial
     return user.firstName.isNotEmpty && user.initialWeight != null;
+  }
+
+  /// Busca múltiplos usuários por IDs em batch (máx 30 por query do Firestore)
+  Future<Map<String, UserModel>> getUsersByIds(List<String> userIds) async {
+    if (userIds.isEmpty) return {};
+
+    final Map<String, UserModel> results = {};
+
+    // Firestore whereIn suporta máx 30 valores
+    for (var i = 0; i < userIds.length; i += 30) {
+      final batch = userIds.skip(i).take(30).toList();
+      final snapshot = await _usersCollection
+          .where(FieldPath.documentId, whereIn: batch)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        results[doc.id] = UserModel.fromFirestore(doc);
+      }
+    }
+
+    return results;
   }
 }

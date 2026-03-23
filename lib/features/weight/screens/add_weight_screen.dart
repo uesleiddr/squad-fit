@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/services/weight_service.dart';
+import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/responsive.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class AddWeightScreen extends StatefulWidget {
   const AddWeightScreen({super.key});
@@ -10,7 +14,7 @@ class AddWeightScreen extends StatefulWidget {
 
 class _AddWeightScreenState extends State<AddWeightScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _weightService = WeightService();
+  final _weightService = getIt<WeightService>();
   final _weightController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
@@ -53,22 +57,12 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
       await _weightService.addWeight(weight, date: _selectedDate);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Peso registrado com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        SnackBarHelper.showSuccess(context, 'Peso registrado com sucesso!');
         Navigator.of(context).pop(true); // Retorna true para indicar sucesso
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao registrar peso: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackBarHelper.showError(context, 'Não foi possível registrar o peso. Tente novamente.');
       }
     } finally {
       if (mounted) {
@@ -77,22 +71,6 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
     }
   }
 
-  String _formatDate(DateTime date) {
-    final weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-    final months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-
-    return '${weekdays[date.weekday % 7]}, ${date.day} de ${months[date.month - 1]} de ${date.year}';
-  }
-
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-           date.month == now.month &&
-           date.day == now.day;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +80,7 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: context.screenPadding,
           child: Form(
             key: _formKey,
             child: Column(
@@ -153,9 +131,9 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                _isToday(_selectedDate)
+                                DateFormatter.isToday(_selectedDate)
                                     ? 'Hoje'
-                                    : _formatDate(_selectedDate),
+                                    : DateFormatter.formatWithWeekday(_selectedDate),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -198,7 +176,7 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
                     }
                     final weight = double.tryParse(value.replaceAll(',', '.'));
                     if (weight == null || weight <= 0 || weight > 500) {
-                      return 'Peso invalido';
+                      return 'Peso inválido';
                     }
                     return null;
                   },

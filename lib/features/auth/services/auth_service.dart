@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -41,7 +42,7 @@ class AuthService {
 
     // Verificar se authenticate é suportado
     if (!_googleSignIn.supportsAuthenticate()) {
-      throw Exception('Google Sign In nao e suportado nesta plataforma');
+      throw Exception('Google Sign In não é suportado nesta plataforma');
     }
 
     try {
@@ -60,8 +61,8 @@ class AuthService {
 
       return await _auth.signInWithCredential(credential);
     } catch (e) {
-      // Log do erro para debug
-      print('Erro Google Sign In: $e');
+      // Log do erro para debug (só aparece em modo debug)
+      debugPrint('Erro Google Sign In: $e');
       rethrow;
     }
   }

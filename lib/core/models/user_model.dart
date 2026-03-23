@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
-class UserModel {
+class UserModel extends Equatable {
   final String id;
   final String firstName;
   final String lastName;
@@ -13,7 +14,7 @@ class UserModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  UserModel({
+  const UserModel({
     required this.id,
     required this.firstName,
     required this.lastName,
@@ -42,6 +43,23 @@ class UserModel {
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final now = DateTime.now();
+
+    // Helper para converter Timestamp com null safety
+    DateTime? parseTimestampNullable(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return null;
+    }
+
+    DateTime parseTimestamp(dynamic value, DateTime fallback) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return fallback;
+    }
+
     return UserModel(
       id: doc.id,
       firstName: data['firstName'] ?? '',
@@ -51,11 +69,9 @@ class UserModel {
       initialWeight: data['initialWeight']?.toDouble(),
       goalWeight: data['goalWeight']?.toDouble(),
       height: data['height'],
-      birthDate: data['birthDate'] != null
-          ? (data['birthDate'] as Timestamp).toDate()
-          : null,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      birthDate: parseTimestampNullable(data['birthDate']),
+      createdAt: parseTimestamp(data['createdAt'], now),
+      updatedAt: parseTimestamp(data['updatedAt'], now),
     );
   }
 
@@ -101,4 +117,19 @@ class UserModel {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        firstName,
+        lastName,
+        email,
+        photoUrl,
+        initialWeight,
+        goalWeight,
+        height,
+        birthDate,
+        createdAt,
+        updatedAt,
+      ];
 }

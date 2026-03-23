@@ -1,11 +1,119 @@
 import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/models/user_model.dart';
+import '../../../core/models/competition_model.dart';
+import '../../../core/models/weight_record_model.dart';
+import '../../../core/services/user_service.dart';
+import '../../../core/services/weight_service.dart';
+import '../../../core/services/competition_service.dart';
 
-class UserStatsCard extends StatelessWidget {
+/// Dados combinados para o UserStatsCard
+class _UserStatsData {
+  final UserModel? user;
+  final WeightRecordModel? latestWeight;
+  final CompetitionModel? activeCompetition;
+
+  _UserStatsData({
+    this.user,
+    this.latestWeight,
+    this.activeCompetition,
+  });
+}
+
+class UserStatsCard extends StatefulWidget {
   const UserStatsCard({super.key});
+
+  @override
+  State<UserStatsCard> createState() => _UserStatsCardState();
+}
+
+class _UserStatsCardState extends State<UserStatsCard> {
+  final _userService = getIt<UserService>();
+  final _weightService = getIt<WeightService>();
+  final _competitionService = getIt<CompetitionService>();
+
+  late final Stream<_UserStatsData> _combinedStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _combinedStream = _createCombinedStream();
+  }
+
+  Stream<_UserStatsData> _createCombinedStream() {
+    final userStream = _userService.getCurrentUserStream();
+
+    final weightStream = _weightService
+        .getWeightHistoryStream()
+        .map((records) => records.isNotEmpty ? records.first : null);
+
+    final competitionStream = _competitionService
+        .getMyCompetitionsStream()
+        .map((competitions) =>
+            competitions.where((c) => !c.hasEnded).toList().firstOrNull);
+
+    return Rx.combineLatest3(
+      userStream,
+      weightStream,
+      competitionStream,
+      (UserModel? user, WeightRecordModel? weight, CompetitionModel? competition) {
+        return _UserStatsData(
+          user: user,
+          latestWeight: weight,
+          activeCompetition: competition,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    return StreamBuilder<_UserStatsData>(
+      stream: _combinedStream,
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+
+        return _buildCard(
+          context,
+          colorScheme,
+          data?.user,
+          data?.latestWeight,
+          data?.activeCompetition,
+        );
+      },
+    );
+  }
+
+  Widget _buildCard(
+    BuildContext context,
+    ColorScheme colorScheme,
+    UserModel? user,
+    WeightRecordModel? latestWeight,
+    CompetitionModel? activeCompetition,
+  ) {
+    final firstName = user?.firstName ?? 'Usuário';
+    final currentWeight = latestWeight?.weight ?? user?.initialWeight;
+    final goalWeight = user?.goalWeight;
+    final initialWeight = user?.initialWeight;
+
+    // Calcula perda de peso
+    double? weightLost;
+    if (initialWeight != null && currentWeight != null) {
+      weightLost = initialWeight - currentWeight;
+    }
+
+    // Calcula progresso
+    double progress = 0;
+    if (initialWeight != null && goalWeight != null && currentWeight != null) {
+      final totalToLose = initialWeight - goalWeight;
+      if (totalToLose > 0) {
+        final lost = initialWeight - currentWeight;
+        progress = (lost / totalToLose).clamp(0.0, 1.0);
+      }
+    }
 
     return Card(
       elevation: 2,
@@ -19,29 +127,46 @@ class UserStatsCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: colorScheme.primary,
-                  child: const Icon(
-                    Icons.person,
-                    size: 28,
-                    color: Colors.white,
-                  ),
+                  backgroundImage: user?.photoUrl != null
+                      ? NetworkImage(user!.photoUrl!)
+                      : null,
+                  child: user?.photoUrl == null
+                      ? const Icon(
+                          Icons.person,
+                          size: 28,
+                          color: Colors.white,
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Olá, João!',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Olá, $firstName!',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
                       ),
-                      Text(
-                        'Competição: Desafio Verão 2026',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onPrimaryContainer
-                                  .withValues(alpha: 0.7),
-                            ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          activeCompetition != null
+                              ? 'Competição: ${activeCompetition.name}'
+                              : 'Sem competição ativa',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onPrimaryContainer
+                                        .withValues(alpha: 0.7),
+                                  ),
+                        ),
                       ),
                     ],
                   ),
@@ -55,7 +180,9 @@ class UserStatsCard extends StatelessWidget {
                   child: _StatItem(
                     icon: Icons.monitor_weight_outlined,
                     label: 'Peso Atual',
-                    value: '82.5 kg',
+                    value: currentWeight != null
+                        ? '${currentWeight.toStringAsFixed(1)} kg'
+                        : '-- kg',
                     color: colorScheme.primary,
                   ),
                 ),
@@ -63,16 +190,24 @@ class UserStatsCard extends StatelessWidget {
                   child: _StatItem(
                     icon: Icons.flag_outlined,
                     label: 'Meta',
-                    value: '75.0 kg',
+                    value: goalWeight != null
+                        ? '${goalWeight.toStringAsFixed(1)} kg'
+                        : '-- kg',
                     color: colorScheme.secondary,
                   ),
                 ),
                 Expanded(
                   child: _StatItem(
-                    icon: Icons.trending_down,
+                    icon: weightLost != null && weightLost >= 0
+                        ? Icons.trending_down
+                        : Icons.trending_up,
                     label: 'Perdido',
-                    value: '-3.5 kg',
-                    color: Colors.green,
+                    value: weightLost != null
+                        ? '${weightLost >= 0 ? '-' : '+'}${weightLost.abs().toStringAsFixed(1)} kg'
+                        : '-- kg',
+                    color: weightLost != null && weightLost >= 0
+                        ? Colors.green
+                        : Colors.red,
                   ),
                 ),
               ],
@@ -81,7 +216,7 @@ class UserStatsCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
-                value: 0.47,
+                value: progress,
                 minHeight: 8,
                 backgroundColor: colorScheme.surface,
                 valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
@@ -89,7 +224,9 @@ class UserStatsCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '47% da meta atingida',
+              goalWeight != null
+                  ? '${(progress * 100).toInt()}% da meta atingida'
+                  : 'Defina uma meta de peso',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
                   ),
@@ -120,15 +257,21 @@ class _StatItem extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ),
       ],
     );

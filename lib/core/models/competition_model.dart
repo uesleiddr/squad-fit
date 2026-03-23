@@ -1,6 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
-class CompetitionModel {
+/// Regra de vitória da competição
+enum VictoryRule {
+  /// Vence quem perder mais peso em kg
+  totalWeightLoss,
+  /// Vence quem perder maior percentual de peso
+  percentageLoss,
+}
+
+class CompetitionModel extends Equatable {
   final String id;
   final String name;
   final String? description;
@@ -8,10 +17,11 @@ class CompetitionModel {
   final DateTime startDate;
   final DateTime endDate;
   final String inviteCode;
+  final VictoryRule victoryRule;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  CompetitionModel({
+  const CompetitionModel({
     required this.id,
     required this.name,
     this.description,
@@ -19,6 +29,7 @@ class CompetitionModel {
     required this.startDate,
     required this.endDate,
     required this.inviteCode,
+    required this.victoryRule,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -34,16 +45,30 @@ class CompetitionModel {
 
   factory CompetitionModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final now = DateTime.now();
+
+    // Helper para converter Timestamp com null safety
+    DateTime parseTimestamp(dynamic value, DateTime fallback) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return fallback;
+    }
+
     return CompetitionModel(
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'],
       adminId: data['adminId'] ?? '',
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
+      startDate: parseTimestamp(data['startDate'], now),
+      endDate: parseTimestamp(data['endDate'], now.add(const Duration(days: 30))),
       inviteCode: data['inviteCode'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      victoryRule: VictoryRule.values.firstWhere(
+        (e) => e.name == data['victoryRule'],
+        orElse: () => VictoryRule.totalWeightLoss,
+      ),
+      createdAt: parseTimestamp(data['createdAt'], now),
+      updatedAt: parseTimestamp(data['updatedAt'], now),
     );
   }
 
@@ -55,6 +80,7 @@ class CompetitionModel {
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
       'inviteCode': inviteCode,
+      'victoryRule': victoryRule.name,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -68,6 +94,7 @@ class CompetitionModel {
     DateTime? startDate,
     DateTime? endDate,
     String? inviteCode,
+    VictoryRule? victoryRule,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -79,8 +106,23 @@ class CompetitionModel {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       inviteCode: inviteCode ?? this.inviteCode,
+      victoryRule: victoryRule ?? this.victoryRule,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        name,
+        description,
+        adminId,
+        startDate,
+        endDate,
+        inviteCode,
+        victoryRule,
+        createdAt,
+        updatedAt,
+      ];
 }

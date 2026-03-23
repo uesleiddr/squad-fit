@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sign_in_button/sign_in_button.dart';
+import '../../../core/di/service_locator.dart';
 import '../services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/responsive.dart';
+import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/utils/validators.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
+  final _authService = getIt<AuthService>();
 
   bool _isLoading = false;
   bool _isLogin = true;
@@ -104,12 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authService.resetPassword(email);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email de recuperacao enviado!'),
-            backgroundColor: AppTheme.secondaryColor,
-          ),
-        );
+        SnackBarHelper.showSuccess(context, 'Email de recuperação enviado!');
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -131,15 +130,15 @@ class _LoginScreenState extends State<LoginScreen> {
   String _getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'Usuario nao encontrado.';
+        return 'Usuário não encontrado.';
       case 'wrong-password':
         return 'Senha incorreta.';
       case 'email-already-in-use':
-        return 'Este email ja esta em uso.';
+        return 'Este email já está em uso.';
       case 'weak-password':
         return 'A senha deve ter pelo menos 6 caracteres.';
       case 'invalid-email':
-        return 'Email invalido.';
+        return 'Email inválido.';
       case 'too-many-requests':
         return 'Muitas tentativas. Tente novamente mais tarde.';
       default:
@@ -153,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: context.screenPadding,
             child: Form(
               key: _formKey,
               child: Column(
@@ -210,15 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Email',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Digite seu email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Email invalido';
-                      }
-                      return null;
-                    },
+                    validator: Validators.validateEmail,
                   ),
                   const SizedBox(height: 16),
 
@@ -242,15 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Digite sua senha';
-                      }
-                      if (value.length < 6) {
-                        return 'A senha deve ter pelo menos 6 caracteres';
-                      }
-                      return null;
-                    },
+                    validator: Validators.validatePassword,
                   ),
                   const SizedBox(height: 8),
 
@@ -300,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Botao Google
                   SignInButton(
                     Buttons.google,
-                    onPressed: () => _isLoading ? null : _signInWithGoogle(),
+                    onPressed: _isLoading ? () {} : _signInWithGoogle,
                     text: 'Continuar com Google',
                   ),
                   const SizedBox(height: 24),
@@ -310,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _isLogin ? 'Nao tem uma conta?' : 'Ja tem uma conta?',
+                        _isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       TextButton(
