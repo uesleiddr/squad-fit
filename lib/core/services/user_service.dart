@@ -1,43 +1,48 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../models/user_model.dart';
 
 class UserService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _supabase = supabase.Supabase.instance.client;
 
-  CollectionReference<Map<String, dynamic>> get _usersCollection =>
-      _firestore.collection('users');
+  /// Retorna o usuário atual do Supabase Auth
+  supabase.User? get currentAuthUser => _supabase.auth.currentUser;
 
-  /// Retorna o usuário atual do Firebase Auth
-  User? get currentAuthUser => _auth.currentUser;
+  /// ID do usuário atual
+  String? get _userId => currentAuthUser?.id;
 
-  /// Busca o perfil do usuário atual no Firestore
+  /// Busca o perfil do usuário atual no Supabase
   Future<UserModel?> getCurrentUser() async {
-    final authUser = currentAuthUser;
-    if (authUser == null) return null;
-    return getUserById(authUser.uid);
+    if (_userId == null) return null;
+    return getUserById(_userId!);
   }
 
   /// Busca um usuário pelo ID
   Future<UserModel?> getUserById(String userId) async {
-    final doc = await _usersCollection.doc(userId).get();
-    if (!doc.exists) return null;
-    return UserModel.fromFirestore(doc);
+    final response = await _supabase
+        .from('users')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return UserModel.fromJson(response);
   }
 
   /// Stream do usuário atual (atualiza em tempo real)
   Stream<UserModel?> getCurrentUserStream() {
-    final authUser = currentAuthUser;
-    if (authUser == null) return Stream.value(null);
+    if (_userId == null) return Stream.value(null);
 
-    return _usersCollection.doc(authUser.uid).snapshots().map((doc) {
-      if (!doc.exists) return null;
-      return UserModel.fromFirestore(doc);
-    });
+    return _supabase
+        .from('users')
+        .stream(primaryKey: ['id'])
+        .eq('id', _userId!)
+        .map((data) {
+          if (data.isEmpty) return null;
+          return UserModel.fromJson(data.first);
+        });
   }
 
-  /// Cria o perfil do usuário no Firestore (após primeiro login)
+  /// Cria o perfil do usuário no Supabase (após primeiro login)
   Future<UserModel> createUser({
     required String firstName,
     required String lastName,
@@ -55,7 +60,7 @@ class UserService {
 
     final now = DateTime.now();
     final user = UserModel(
-      id: authUser.uid,
+      id: authUser.id,
       firstName: firstName,
       lastName: lastName,
       email: email,
@@ -68,7 +73,7 @@ class UserService {
       updatedAt: now,
     );
 
-    await _usersCollection.doc(authUser.uid).set(user.toFirestore());
+    await _supabase.from('users').upsert(user.toJson());
     return user;
   }
 
@@ -82,24 +87,25 @@ class UserService {
     int? height,
     DateTime? birthDate,
   }) async {
-    final authUser = currentAuthUser;
-    if (authUser == null) {
+    if (_userId == null) {
       throw Exception('Usuário não autenticado');
     }
 
-    final updates = <String, dynamic>{
-      'updatedAt': Timestamp.fromDate(DateTime.now()),
-    };
+    final updates = <String, dynamic>{};
 
-    if (firstName != null) updates['firstName'] = firstName;
-    if (lastName != null) updates['lastName'] = lastName;
-    if (photoUrl != null) updates['photoUrl'] = photoUrl;
-    if (initialWeight != null) updates['initialWeight'] = initialWeight;
-    if (goalWeight != null) updates['goalWeight'] = goalWeight;
+    if (firstName != null) updates['first_name'] = firstName;
+    if (lastName != null) updates['last_name'] = lastName;
+    if (photoUrl != null) updates['photo_url'] = photoUrl;
+    if (initialWeight != null) updates['initial_weight'] = initialWeight;
+    if (goalWeight != null) updates['goal_weight'] = goalWeight;
     if (height != null) updates['height'] = height;
-    if (birthDate != null) updates['birthDate'] = Timestamp.fromDate(birthDate);
+    if (birthDate != null) {
+      updates['birth_date'] = birthDate.toIso8601String().split('T')[0];
+    }
 
-    await _usersCollection.doc(authUser.uid).update(updates);
+    if (updates.isNotEmpty) {
+      await _supabase.from('users').update(updates).eq('id', _userId!);
+    }
   }
 
   /// Verifica se o usuário já completou o cadastro
@@ -111,22 +117,19 @@ class UserService {
     return user.firstName.isNotEmpty && user.initialWeight != null;
   }
 
-  /// Busca múltiplos usuários por IDs em batch (máx 30 por query do Firestore)
+  /// Busca múltiplos usuários por IDs
   Future<Map<String, UserModel>> getUsersByIds(List<String> userIds) async {
     if (userIds.isEmpty) return {};
 
+    final response = await _supabase
+        .from('users')
+        .select()
+        .inFilter('id', userIds);
+
     final Map<String, UserModel> results = {};
-
-    // Firestore whereIn suporta máx 30 valores
-    for (var i = 0; i < userIds.length; i += 30) {
-      final batch = userIds.skip(i).take(30).toList();
-      final snapshot = await _usersCollection
-          .where(FieldPath.documentId, whereIn: batch)
-          .get();
-
-      for (final doc in snapshot.docs) {
-        results[doc.id] = UserModel.fromFirestore(doc);
-      }
+    for (final json in response) {
+      final user = UserModel.fromJson(json);
+      results[user.id] = user;
     }
 
     return results;

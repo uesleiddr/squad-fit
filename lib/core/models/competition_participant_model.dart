@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 enum ParticipantStatus {
@@ -30,37 +29,29 @@ class CompetitionParticipantModel extends Equatable {
     return ((initialWeight - currentWeight) / initialWeight) * 100;
   }
 
-  factory CompetitionParticipantModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory CompetitionParticipantModel.fromJson(Map<String, dynamic> json) {
     final now = DateTime.now();
 
-    // Helper para converter Timestamp com null safety
-    DateTime parseTimestamp(dynamic value, DateTime fallback) {
-      if (value is Timestamp) {
-        return value.toDate();
-      }
-      return fallback;
-    }
-
     return CompetitionParticipantModel(
-      id: doc.id,
-      competitionId: data['competitionId'] ?? '',
-      userId: data['userId'] ?? '',
-      initialWeight: data['initialWeight']?.toDouble() ?? 0.0,
-      joinedAt: parseTimestamp(data['joinedAt'], now),
+      id: json['id'] ?? '',
+      competitionId: json['competition_id'] ?? '',
+      userId: json['user_id'] ?? '',
+      initialWeight: json['initial_weight']?.toDouble() ?? 0.0,
+      joinedAt: json['joined_at'] != null
+          ? DateTime.parse(json['joined_at'])
+          : now,
       status: ParticipantStatus.values.firstWhere(
-        (e) => e.name == data['status'],
+        (e) => e.name == json['status'],
         orElse: () => ParticipantStatus.active,
       ),
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toJson() {
     return {
-      'competitionId': competitionId,
-      'userId': userId,
-      'initialWeight': initialWeight,
-      'joinedAt': Timestamp.fromDate(joinedAt),
+      'competition_id': competitionId,
+      'user_id': userId,
+      'initial_weight': initialWeight,
       'status': status.name,
     };
   }

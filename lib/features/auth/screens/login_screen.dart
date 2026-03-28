@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:sign_in_button/sign_in_button.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -53,9 +52,9 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text,
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       setState(() {
-        _errorMessage = _getErrorMessage(e.code);
+        _errorMessage = _getErrorMessage(e.message);
       });
     } catch (e) {
       setState(() {
@@ -79,8 +78,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authService.signInWithGoogle();
     } catch (e) {
+      debugPrint('Google Sign In Error: $e');
       setState(() {
-        _errorMessage = 'Erro ao entrar com Google. Tente novamente.';
+        _errorMessage = 'Erro ao entrar com Google: $e';
       });
     } finally {
       if (mounted) {
@@ -110,9 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         SnackBarHelper.showSuccess(context, 'Email de recuperação enviado!');
       }
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       setState(() {
-        _errorMessage = _getErrorMessage(e.code);
+        _errorMessage = _getErrorMessage(e.message);
       });
     } catch (e) {
       setState(() {
@@ -127,23 +127,27 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'Usuário não encontrado.';
-      case 'wrong-password':
-        return 'Senha incorreta.';
-      case 'email-already-in-use':
-        return 'Este email já está em uso.';
-      case 'weak-password':
-        return 'A senha deve ter pelo menos 6 caracteres.';
-      case 'invalid-email':
-        return 'Email inválido.';
-      case 'too-many-requests':
-        return 'Muitas tentativas. Tente novamente mais tarde.';
-      default:
-        return 'Ocorreu um erro. Tente novamente.';
+  String _getErrorMessage(String message) {
+    // Supabase retorna mensagens em inglês, vamos traduzir as principais
+    if (message.contains('Invalid login credentials')) {
+      return 'Email ou senha incorretos.';
     }
+    if (message.contains('Email not confirmed')) {
+      return 'Email não confirmado. Verifique sua caixa de entrada.';
+    }
+    if (message.contains('User already registered')) {
+      return 'Este email já está em uso.';
+    }
+    if (message.contains('Password should be at least')) {
+      return 'A senha deve ter pelo menos 6 caracteres.';
+    }
+    if (message.contains('Invalid email')) {
+      return 'Email inválido.';
+    }
+    if (message.contains('rate limit')) {
+      return 'Muitas tentativas. Tente novamente mais tarde.';
+    }
+    return 'Ocorreu um erro. Tente novamente.';
   }
 
   @override
@@ -281,10 +285,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
 
                   // Botao Google
-                  SignInButton(
-                    Buttons.google,
-                    onPressed: _isLoading ? () {} : _signInWithGoogle,
-                    text: 'Continuar com Google',
+                  OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    icon: Image.network(
+                      'https://www.google.com/favicon.ico',
+                      height: 18,
+                      width: 18,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata),
+                    ),
+                    label: const Text('Continuar com Google'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                   const SizedBox(height: 24),
 

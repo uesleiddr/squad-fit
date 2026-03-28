@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/services/user_service.dart';
 import '../../home/screens/home_screen.dart';
@@ -11,8 +11,8 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         // Carregando
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -23,8 +23,11 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
+        // Verifica se há sessão ativa
+        final session = Supabase.instance.client.auth.currentSession;
+
         // Logado -> verifica perfil
-        if (snapshot.hasData) {
+        if (session != null) {
           return const _ProfileChecker();
         }
 

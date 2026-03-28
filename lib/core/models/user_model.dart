@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class UserModel extends Equatable {
@@ -41,52 +40,41 @@ class UserModel extends Equatable {
     return age;
   }
 
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory UserModel.fromJson(Map<String, dynamic> json) {
     final now = DateTime.now();
 
-    // Helper para converter Timestamp com null safety
-    DateTime? parseTimestampNullable(dynamic value) {
-      if (value is Timestamp) {
-        return value.toDate();
-      }
-      return null;
-    }
-
-    DateTime parseTimestamp(dynamic value, DateTime fallback) {
-      if (value is Timestamp) {
-        return value.toDate();
-      }
-      return fallback;
-    }
-
     return UserModel(
-      id: doc.id,
-      firstName: data['firstName'] ?? '',
-      lastName: data['lastName'] ?? '',
-      email: data['email'] ?? '',
-      photoUrl: data['photoUrl'],
-      initialWeight: data['initialWeight']?.toDouble(),
-      goalWeight: data['goalWeight']?.toDouble(),
-      height: data['height'],
-      birthDate: parseTimestampNullable(data['birthDate']),
-      createdAt: parseTimestamp(data['createdAt'], now),
-      updatedAt: parseTimestamp(data['updatedAt'], now),
+      id: json['id'] ?? '',
+      firstName: json['first_name'] ?? '',
+      lastName: json['last_name'] ?? '',
+      email: json['email'] ?? '',
+      photoUrl: json['photo_url'],
+      initialWeight: json['initial_weight']?.toDouble(),
+      goalWeight: json['goal_weight']?.toDouble(),
+      height: json['height']?.toInt(),
+      birthDate: json['birth_date'] != null
+          ? DateTime.parse(json['birth_date'])
+          : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : now,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : now,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toJson() {
     return {
-      'firstName': firstName,
-      'lastName': lastName,
+      'id': id,
+      'first_name': firstName,
+      'last_name': lastName,
       'email': email,
-      'photoUrl': photoUrl,
-      'initialWeight': initialWeight,
-      'goalWeight': goalWeight,
+      'photo_url': photoUrl,
+      'initial_weight': initialWeight,
+      'goal_weight': goalWeight,
       'height': height,
-      'birthDate': birthDate != null ? Timestamp.fromDate(birthDate!) : null,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'birth_date': birthDate?.toIso8601String().split('T')[0],
     };
   }
 

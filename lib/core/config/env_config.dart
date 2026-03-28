@@ -5,13 +5,12 @@
 /// flutter run --dart-define-from-file=.env
 /// ```
 class EnvConfig {
-  // Firebase Android
-  static const firebaseApiKey = String.fromEnvironment('FIREBASE_ANDROID_API_KEY');
-  static const firebaseAppId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
-  static const firebaseMessagingSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
-  static const firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
-  static const firebaseStorageBucket = String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
+  // Supabase (Auth + Database)
+  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
-  // Outras APIs (adicione suas keys sensíveis aqui)
-  // static const mySecretApiKey = String.fromEnvironment('MY_SECRET_API_KEY');
+  // APIs de Nutrição
+  static const geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
+  static const fatsecretClientId = String.fromEnvironment('FATSECRET_CLIENT_ID');
+  static const fatsecretClientSecret = String.fromEnvironment('FATSECRET_CLIENT_SECRET');
 }
