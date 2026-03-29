@@ -45,6 +45,7 @@ dependencies:
   google_sign_in: ^6.2.1
   http: ^1.2.2
   fl_chart: ^0.69.2
+  material_symbols_icons: ^4.2906.0
 
 dev_dependencies:
   flutter_test:

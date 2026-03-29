@@ -45,8 +45,9 @@ class _ProfileChecker extends StatelessWidget {
   Widget build(BuildContext context) {
     final userService = getIt<UserService>();
 
-    return StreamBuilder(
-      stream: userService.getCurrentUserStream(),
+    // Usa FutureBuilder para verificação inicial (mais confiável que stream)
+    return FutureBuilder(
+      future: userService.getCurrentUser(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(

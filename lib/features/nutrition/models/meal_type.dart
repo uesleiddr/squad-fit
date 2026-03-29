@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/material_symbols_icons.dart';
+
 enum MealType {
   breakfast,
   lunch,
@@ -17,16 +20,16 @@ enum MealType {
     }
   }
 
-  String get icon {
+  IconData get icon {
     switch (this) {
       case MealType.breakfast:
-        return '☀️';
+        return Symbols.coffee_rounded;
       case MealType.lunch:
-        return '🌞';
+        return Symbols.restaurant_rounded;
       case MealType.dinner:
-        return '🌙';
+        return Symbols.restaurant_rounded;
       case MealType.snack:
-        return '🍎';
+        return Symbols.nutrition_rounded;
     }
   }
 

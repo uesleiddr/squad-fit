@@ -101,9 +101,188 @@ Adicionar campo `calorieGoal` no `UserModel`.
 
 ---
 
-## Etapa 2: Serviços de API
+## Etapa 2: Models
 
-### 2.1 FatSecret Service
+### 2.1 MealEntry
+
+```dart
+class MealEntry extends Equatable {
+  final String id;
+  final String userId;
+  final MealType mealType;
+  final String description;
+  final int totalCalories;
+  final double totalProtein;
+  final double totalCarbs;
+  final double totalFat;
+  final List<MealItem> items;
+  final DateTime recordedAt;
+  final DateTime createdAt;
+}
+
+enum MealType { breakfast, lunch, dinner, snack }
+```
+
+### 2.2 MealItem
+
+```dart
+class MealItem extends Equatable {
+  final String id;
+  final String mealEntryId;
+  final String name;
+  final double quantity;
+  final String unit;
+  final int calories;
+  final double protein;
+  final double carbs;
+  final double fat;
+  final String? fatsecretFoodId;
+}
+```
+
+### 2.3 DailySummary
+
+```dart
+class DailySummary extends Equatable {
+  final DateTime date;
+  final int totalCalories;
+  final int calorieGoal;
+  final double totalProtein;
+  final double totalCarbs;
+  final double totalFat;
+  final List<MealEntry> meals;
+
+  double get calorieProgress => totalCalories / calorieGoal;
+  int get remainingCalories => calorieGoal - totalCalories;
+}
+```
+
+---
+
+## Etapa 3: Telas (com dados mockados)
+
+### 3.1 NutritionScreen (Tela Principal)
+
+Arquivo: `lib/features/nutrition/screens/nutrition_screen.dart`
+
+**Decisões de Design:**
+- Todas as 4 refeições sempre visíveis (mostra 0 kcal se vazia)
+- Botão único "+" no final que abre modal
+- Layout limpo e direto, sem gráfico de pizza na tela principal
+- Inspirado no MyFitnessPal mas com estilo próprio
+
+Layout:
+```
+┌─────────────────────────────────────┐
+│  ← Nutrição            < Hoje >     │  ← AppBar com seletor de data
+├─────────────────────────────────────┤
+│  1.044 kcal restantes               │
+│  ━━━━━━━━━━━━━━░░░░░  (barra)       │  ← Barra de progresso linear
+│  Meta: 2.000  |  Consumido: 956     │
+├─────────────────────────────────────┤
+│  ☀️ Café da Manhã           256 kcal │
+│     2x Ovo frito              180   │
+│     1x Pão integral            76   │
+├─────────────────────────────────────┤
+│  🌞 Almoço                    0 kcal │
+│     (vazio)                         │
+├─────────────────────────────────────┤
+│  🌙 Jantar                    0 kcal │
+│     (vazio)                         │
+├─────────────────────────────────────┤
+│  🍎 Lanches                 700 kcal │
+│     1x Açaí 500ml             650   │
+│     1x Banana                  50   │
+├─────────────────────────────────────┤
+│              [ + Adicionar ]        │  ← Botão único
+└─────────────────────────────────────┘
+```
+
+**Comportamento:**
+- Scroll vertical se necessário
+- Cada seção de refeição é sempre visível
+- Refeições vazias mostram "(vazio)" em texto sutil
+- Botão "+" abre modal para adicionar refeição
+
+### 3.2 AddMealModal (Modal de Entrada)
+
+Arquivo: `lib/features/nutrition/widgets/add_meal_modal.dart`
+
+**Nota:** Mudamos de tela separada para modal (BottomSheet) para fluxo mais rápido.
+
+Layout do Modal:
+```
+┌─────────────────────────────────────┐
+│  ━━━  (handle do modal)             │
+├─────────────────────────────────────┤
+│  Adicionar Refeição                 │
+├─────────────────────────────────────┤
+│  Tipo de Refeição                   │
+│  [☀️Café] [🌞Almoço] [🌙Jantar] [🍎Lanche] │  ← Chips selecionáveis
+├─────────────────────────────────────┤
+│  ┌─────────────────────────────┐    │
+│  │ Descreva o que você comeu...│    │
+│  │                             │    │  ← TextField multiline
+│  │                             │    │
+│  └─────────────────────────────┘    │
+├─────────────────────────────────────┤
+│         [Registrar Refeição]        │  ← Botão principal
+└─────────────────────────────────────┘
+```
+
+**Comportamento:**
+- Abre como BottomSheet modal
+- Tipo de refeição pré-selecionado com base no horário
+- Campo de texto livre para descrição natural
+- Ao fechar, tela principal atualiza imediatamente
+
+**Fluxo de Preview (após análise):**
+```
+┌─────────────────────────────────────┐
+│  ━━━                                │
+├─────────────────────────────────────┤
+│  Confirmar Refeição                 │
+├─────────────────────────────────────┤
+│  ✓ 2x Ovo frito             180 cal │
+│  ✓ 1x Pão integral          120 cal │
+│  ✓ 1x Suco de laranja       110 cal │
+├─────────────────────────────────────┤
+│  Total:                     410 cal │
+├─────────────────────────────────────┤
+│  [Cancelar]        [Confirmar]      │
+└─────────────────────────────────────┘
+```
+
+### 3.3 Configuração de Meta de Calorias
+
+**Decisão:** A meta de calorias será configurada na tela de **Configurações/Perfil** do app (futura), junto com outros dados do usuário (altura, peso, meta de emagrecimento). Por enquanto, usa o valor padrão de 2000 kcal definido no `UserModel`.
+
+### 3.4 Widgets Reutilizáveis
+
+#### CalorieProgressBar
+- Barra de progresso linear horizontal
+- Mostra calorias restantes, meta e consumido
+- Cor muda conforme progresso (verde -> amarelo -> vermelho)
+
+#### MealSection
+- Seção de refeição com ícone, nome e total de calorias
+- Lista itens com quantidades e calorias individuais
+- Sempre visível (mostra "vazio" se não tiver itens)
+- Ícone por tipo (☀️ café, 🌞 almoço, 🌙 jantar, 🍎 lanche)
+
+#### FoodItemTile
+- Item individual com nome, quantidade e calorias
+- Opção de remover (swipe ou botão)
+
+#### DateSelector
+- Widget para navegar entre datas (< Hoje >)
+- Tap abre DatePicker
+
+---
+
+## Etapa 4: Services (Backend)
+
+### 4.1 FatSecret Service
 
 Arquivo: `lib/features/nutrition/services/fatsecret_service.dart`
 
@@ -126,7 +305,7 @@ class FatSecretService {
 }
 ```
 
-### 2.2 Gemini Service
+### 4.2 Gemini Service
 
 Arquivo: `lib/features/nutrition/services/gemini_nutrition_service.dart`
 
@@ -157,7 +336,7 @@ Formato: [{"name": "nome do alimento", "quantity": numero, "unit": "unidade"}]
 Texto: "{input}"
 ```
 
-### 2.3 Nutrition Service (Orquestrador)
+### 4.3 Nutrition Service (Orquestrador)
 
 Arquivo: `lib/features/nutrition/services/nutrition_service.dart`
 
@@ -187,180 +366,19 @@ class NutritionService {
 
 ---
 
-## Etapa 3: Models
+## Etapa 5: Integração e Navegação
 
-### 3.1 MealEntry
-
-```dart
-class MealEntry extends Equatable {
-  final String id;
-  final String usrId;
-  final MealType mealType;
-  final String description;
-  final int totalCalories;
-  final double totalProtein;
-  final double totalCarbs;
-  final double totalFat;
-  final List<MealItem> items;
-  final DateTime recordedAt;
-  final DateTime createdAt;
-}
-
-enum MealType { breakfast, lunch, dinner, snack }
-```
-
-### 3.2 MealItem
-
-```dart
-class MealItem extends Equatable {
-  final String id;
-  final String mealEntryId;
-  final String name;
-  final double quantity;
-  final String unit;
-  final int calories;
-  final double protein;
-  final double carbs;
-  final double fat;
-  final String? fatsecretFoodId;
-}
-```
-
-### 3.3 DailySummary
-
-```dart
-class DailySummary extends Equatable {
-  final DateTime date;
-  final int totalCalories;
-  final int calorieGoal;
-  final double totalProtein;
-  final double totalCarbs;
-  final double totalFat;
-  final List<MealEntry> meals;
-
-  double get calorieProgress => totalCalories / calorieGoal;
-  int get remainingCalories => calorieGoal - totalCalories;
-}
-```
-
----
-
-## Etapa 4: Interface (Telas)
-
-### 4.1 NutritionScreen (Tela Principal)
-
-Arquivo: `lib/features/nutrition/screens/nutrition_screen.dart`
-
-Layout:
-```
-┌─────────────────────────────────────┐
-│  < Hoje, 28 Mar >                   │  ← Seletor de data
-├─────────────────────────────────────┤
-│  ┌─────────────────────────────┐    │
-│  │   1.250 / 2.000 kcal        │    │  ← Progresso circular
-│  │      [===----]              │    │
-│  │    750 kcal restantes       │    │
-│  └─────────────────────────────┘    │
-├─────────────────────────────────────┤
-│  Macros                             │
-│  ┌───────────────────────────┐      │
-│  │  🥧 Pie Chart              │     │  ← fl_chart
-│  │  P: 45g  C: 120g  G: 35g  │      │
-│  └───────────────────────────┘      │
-├─────────────────────────────────────┤
-│  Refeições                          │
-│  ┌─────────────────────────────┐    │
-│  │ ☀️ Café da Manhã    450kcal │    │
-│  │   2x Ovo frito       180    │    │
-│  │   1x Pão integral    120    │    │
-│  │   1x Café c/ leite   150    │    │
-│  └─────────────────────────────┘    │
-│  ┌─────────────────────────────┐    │
-│  │ 🌞 Almoço           800kcal │    │
-│  │   ...                       │    │
-│  └─────────────────────────────┘    │
-├─────────────────────────────────────┤
-│         [+ Adicionar Refeição]      │  ← FAB ou botão
-└─────────────────────────────────────┘
-```
-
-### 4.2 AddMealScreen (Chat de Entrada)
-
-Arquivo: `lib/features/nutrition/screens/add_meal_screen.dart`
-
-Layout:
-```
-┌─────────────────────────────────────┐
-│  ← Adicionar Refeição               │
-├─────────────────────────────────────┤
-│  Tipo de Refeição                   │
-│  [Café] [Almoço] [Jantar] [Lanche]  │  ← Chips selecionáveis
-├─────────────────────────────────────┤
-│                                     │
-│  "Descreva o que você comeu..."     │
-│                                     │
-│  ┌─────────────────────────────┐    │
-│  │ Comi 2 ovos fritos com      │    │
-│  │ pão integral e um copo de   │    │  ← TextField multiline
-│  │ suco de laranja             │    │
-│  └─────────────────────────────┘    │
-│                                     │
-│         [Analisar Refeição]         │  ← Botão principal
-├─────────────────────────────────────┤
-│  (Após análise - preview)           │
-│  ┌─────────────────────────────┐    │
-│  │ ✓ 2x Ovo frito       180cal │    │
-│  │ ✓ 1x Pão integral    120cal │    │
-│  │ ✓ 1x Suco laranja    110cal │    │
-│  ├─────────────────────────────┤    │
-│  │ Total:               410cal │    │
-│  └─────────────────────────────┘    │
-│                                     │
-│  [Cancelar]      [Confirmar]        │
-└─────────────────────────────────────┘
-```
-
-### 4.3 CalorieGoalScreen (Configuração)
-
-Arquivo: `lib/features/nutrition/screens/calorie_goal_screen.dart`
-
-Tela simples para definir meta diária de calorias.
-- Slider ou input numérico
-- Sugestões baseadas em peso/altura (opcional)
-
----
-
-## Etapa 5: Widgets Reutilizáveis
-
-### 5.1 CalorieProgressWidget
-- Círculo de progresso com calorias consumidas/meta
-- Cor muda conforme progresso (verde -> amarelo -> vermelho)
-
-### 5.2 MacrosPieChart
-- Gráfico de pizza com Proteína, Carboidratos, Gordura
-- Usa `fl_chart` (já instalado)
-- Legenda com gramas de cada macro
-
-### 5.3 MealCard
-- Card expansível por tipo de refeição
-- Lista itens com calorias individuais
-- Ícone por tipo (café, almoço, jantar, lanche)
-
-### 5.4 FoodItemTile
-- Item individual com nome, quantidade e calorias
-- Opção de remover (swipe ou botão)
-
----
-
-## Etapa 6: Integração e Navegação
-
-### 6.1 Adicionar rota para NutritionScreen
+### 5.1 Adicionar rota para NutritionScreen
 - Adicionar no drawer/menu principal
 - Ícone: `Icons.restaurant_menu`
 
-### 6.2 Service Locator
+### 5.2 Service Locator
 - Registrar todos os services no `get_it`
 - FatSecretService, GeminiNutritionService, NutritionService
+
+### 5.3 Conectar telas aos services reais
+- Remover dados mockados
+- Testes e ajustes finais
 
 ---
 
@@ -373,17 +391,17 @@ Tela simples para definir meta diária de calorias.
 - [x] Configurar RLS (Row Level Security)
 - [x] Atualizar `UserModel` no Flutter
 
-### Etapa 2: Models
-- [ ] Criar `MealEntry` model
-- [ ] Criar `MealItem` model
-- [ ] Criar `DailySummary` model
-- [ ] Criar enum `MealType`
+### Etapa 2: Models ✅
+- [x] Criar enum `MealType`
+- [x] Criar `MealItem` model
+- [x] Criar `MealEntry` model
+- [x] Criar `DailySummary` model
 
-### Etapa 3: Telas (com dados mockados)
-- [ ] `NutritionScreen` - Tela principal com resumo diário
-- [ ] `AddMealScreen` - Tela de adicionar refeição
-- [ ] Widgets: `CalorieProgressWidget`, `MacrosPieChart`, `MealCard`
-- [ ] Adicionar navegação no drawer
+### Etapa 3: Telas (com dados mockados) ✅
+- [x] `NutritionScreen` - Tela principal com resumo diário
+- [x] `AddMealModal` - Modal de adicionar refeição
+- [x] Widgets: `CalorieProgressBar`, `MealSection`, `FoodItemTile`, `DateSelector`
+- [x] Adicionar navegação no drawer
 
 ### Etapa 4: Services (Backend)
 - [ ] `FatSecretService` - Autenticação OAuth e busca de alimentos

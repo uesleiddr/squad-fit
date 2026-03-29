@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
 import '../../competition/screens/competition_screen.dart';
+import '../../nutrition/screens/screens.dart';
 import '../../weight/screens/add_weight_screen.dart';
 import '../../weight/screens/weight_history_screen.dart';
 
@@ -112,6 +113,18 @@ class AppDrawer extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
+                );
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.restaurant_menu_outlined,
+              selectedIcon: Icons.restaurant_menu,
+              title: 'Nutrição',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NutritionScreen()),
                 );
               },
             ),
