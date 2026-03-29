@@ -1,20 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import '../exceptions/app_exceptions.dart';
 import '../models/weight_record_model.dart';
 import '../utils/validators.dart';
 
 class WeightService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _supabase = Supabase.instance.client;
 
-  CollectionReference<Map<String, dynamic>> get _weightsCollection =>
-      _firestore.collection('weightRecords');
+  String? get _userId => _supabase.auth.currentUser?.id;
 
   /// Registra um novo peso
   Future<WeightRecordModel> addWeight(double weight, {DateTime? date}) async {
-    final authUser = _auth.currentUser;
-    if (authUser == null) {
+    if (_userId == null) {
       throw AuthException.notAuthenticated;
     }
 
@@ -22,64 +18,59 @@ class WeightService {
       throw ValidationException.invalidWeight;
     }
 
-    final now = DateTime.now();
-    final recordDate = date ?? now;
+    final recordDate = date ?? DateTime.now();
 
-    final docRef = _weightsCollection.doc();
-    final record = WeightRecordModel(
-      id: docRef.id,
-      userId: authUser.uid,
-      weight: weight,
-      date: recordDate,
-      createdAt: now,
-    );
+    final response = await _supabase.from('weight_records').insert({
+      'user_id': _userId,
+      'weight': weight,
+      'date': recordDate.toIso8601String().split('T')[0],
+    }).select().single();
 
-    await docRef.set(record.toFirestore());
-    return record;
+    return WeightRecordModel.fromJson(response);
   }
 
   /// Busca todos os registros de peso do usuário atual
   Future<List<WeightRecordModel>> getWeightHistory() async {
-    final authUser = _auth.currentUser;
-    if (authUser == null) return [];
+    if (_userId == null) return [];
 
-    final snapshot = await _weightsCollection
-        .where('userId', isEqualTo: authUser.uid)
-        .orderBy('date', descending: true)
-        .get();
+    final response = await _supabase
+        .from('weight_records')
+        .select()
+        .eq('user_id', _userId!)
+        .order('date', ascending: false);
 
-    return snapshot.docs
-        .map((doc) => WeightRecordModel.fromFirestore(doc))
+    return (response as List)
+        .map((json) => WeightRecordModel.fromJson(json))
         .toList();
   }
 
   /// Stream dos registros de peso (atualiza em tempo real)
   Stream<List<WeightRecordModel>> getWeightHistoryStream() {
-    final authUser = _auth.currentUser;
-    if (authUser == null) return Stream.value([]);
+    if (_userId == null) return Stream.value([]);
 
-    return _weightsCollection
-        .where('userId', isEqualTo: authUser.uid)
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => WeightRecordModel.fromFirestore(doc))
-            .toList());
+    return _supabase
+        .from('weight_records')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', _userId!)
+        .order('date', ascending: false)
+        .map((data) => data.map((e) => WeightRecordModel.fromJson(e)).toList());
   }
 
   /// Busca o peso mais recente do usuário
   Future<WeightRecordModel?> getLatestWeight({String? userId}) async {
-    final targetUserId = userId ?? _auth.currentUser?.uid;
+    final targetUserId = userId ?? _userId;
     if (targetUserId == null) return null;
 
-    final snapshot = await _weightsCollection
-        .where('userId', isEqualTo: targetUserId)
-        .orderBy('date', descending: true)
+    final response = await _supabase
+        .from('weight_records')
+        .select()
+        .eq('user_id', targetUserId)
+        .order('date', ascending: false)
         .limit(1)
-        .get();
+        .maybeSingle();
 
-    if (snapshot.docs.isEmpty) return null;
-    return WeightRecordModel.fromFirestore(snapshot.docs.first);
+    if (response == null) return null;
+    return WeightRecordModel.fromJson(response);
   }
 
   /// Retorna o peso atual do usuário (último registro ou peso inicial do perfil)
@@ -101,56 +92,58 @@ class WeightService {
     required DateTime endDate,
     String? userId,
   }) async {
-    final targetUserId = userId ?? _auth.currentUser?.uid;
+    final targetUserId = userId ?? _userId;
     if (targetUserId == null) return [];
 
-    final snapshot = await _weightsCollection
-        .where('userId', isEqualTo: targetUserId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-        .orderBy('date', descending: true)
-        .get();
+    final response = await _supabase
+        .from('weight_records')
+        .select()
+        .eq('user_id', targetUserId)
+        .gte('date', startDate.toIso8601String().split('T')[0])
+        .lte('date', endDate.toIso8601String().split('T')[0])
+        .order('date', ascending: false);
 
-    return snapshot.docs
-        .map((doc) => WeightRecordModel.fromFirestore(doc))
+    return (response as List)
+        .map((json) => WeightRecordModel.fromJson(json))
         .toList();
   }
 
   /// Busca o peso que o usuário tinha em uma data específica
-  /// 1. Primeiro tenta o peso mais recente ATÉ a data (o peso atual naquela data)
-  /// 2. Se não existir, pega o primeiro peso registrado DEPOIS da data
   Future<WeightRecordModel?> getWeightForDate({
     required DateTime targetDate,
     String? userId,
   }) async {
-    final targetUserId = userId ?? _auth.currentUser?.uid;
+    final targetUserId = userId ?? _userId;
     if (targetUserId == null) return null;
 
-    // Fim do dia para incluir registros do próprio dia
-    final endOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59);
+    final dateStr = targetDate.toIso8601String().split('T')[0];
 
     // 1. Tenta buscar o peso mais recente ATÉ a data alvo
-    final beforeSnapshot = await _weightsCollection
-        .where('userId', isEqualTo: targetUserId)
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-        .orderBy('date', descending: true)
+    var response = await _supabase
+        .from('weight_records')
+        .select()
+        .eq('user_id', targetUserId)
+        .lte('date', dateStr)
+        .order('date', ascending: false)
         .limit(1)
-        .get();
+        .maybeSingle();
 
-    if (beforeSnapshot.docs.isNotEmpty) {
-      return WeightRecordModel.fromFirestore(beforeSnapshot.docs.first);
+    if (response != null) {
+      return WeightRecordModel.fromJson(response);
     }
 
     // 2. Se não tem peso antes, busca o primeiro peso DEPOIS da data
-    final afterSnapshot = await _weightsCollection
-        .where('userId', isEqualTo: targetUserId)
-        .where('date', isGreaterThan: Timestamp.fromDate(endOfDay))
-        .orderBy('date', descending: false)
+    response = await _supabase
+        .from('weight_records')
+        .select()
+        .eq('user_id', targetUserId)
+        .gt('date', dateStr)
+        .order('date', ascending: true)
         .limit(1)
-        .get();
+        .maybeSingle();
 
-    if (afterSnapshot.docs.isNotEmpty) {
-      return WeightRecordModel.fromFirestore(afterSnapshot.docs.first);
+    if (response != null) {
+      return WeightRecordModel.fromJson(response);
     }
 
     return null;
@@ -158,27 +151,17 @@ class WeightService {
 
   /// Deleta um registro de peso (apenas do próprio usuário)
   Future<void> deleteWeight(String recordId) async {
-    final authUser = _auth.currentUser;
-    if (authUser == null) {
+    if (_userId == null) {
       throw AuthException.notAuthenticated;
     }
 
-    final doc = await _weightsCollection.doc(recordId).get();
-    if (!doc.exists) {
-      throw WeightException.notFound;
-    }
-
-    if (doc.data()?['userId'] != authUser.uid) {
-      throw WeightException.noPermission;
-    }
-
-    await _weightsCollection.doc(recordId).delete();
+    // RLS já garante que só pode deletar próprios registros
+    await _supabase.from('weight_records').delete().eq('id', recordId);
   }
 
   /// Atualiza um registro de peso (apenas do próprio usuário)
   Future<void> updateWeight(String recordId, double newWeight) async {
-    final authUser = _auth.currentUser;
-    if (authUser == null) {
+    if (_userId == null) {
       throw AuthException.notAuthenticated;
     }
 
@@ -186,22 +169,14 @@ class WeightService {
       throw ValidationException.invalidWeight;
     }
 
-    final doc = await _weightsCollection.doc(recordId).get();
-    if (!doc.exists) {
-      throw WeightException.notFound;
-    }
-
-    if (doc.data()?['userId'] != authUser.uid) {
-      throw WeightException.noPermission;
-    }
-
-    await _weightsCollection.doc(recordId).update({
-      'weight': newWeight,
-    });
+    // RLS já garante que só pode atualizar próprios registros
+    await _supabase
+        .from('weight_records')
+        .update({'weight': newWeight})
+        .eq('id', recordId);
   }
 
   /// Busca o peso mais recente de múltiplos usuários em batch.
-  /// Retorna um Map onde a chave é o userId e o valor é o WeightRecordModel (ou null).
   Future<Map<String, WeightRecordModel?>> getLatestWeightsForUsers(
     List<String> userIds,
   ) async {
@@ -214,31 +189,27 @@ class WeightService {
       results[userId] = null;
     }
 
-    // Firestore whereIn suporta máx 30 valores
-    for (var i = 0; i < userIds.length; i += 30) {
-      final batch = userIds.skip(i).take(30).toList();
+    // Busca todos os pesos dos usuários
+    final response = await _supabase
+        .from('weight_records')
+        .select()
+        .inFilter('user_id', userIds)
+        .order('date', ascending: false);
 
-      // Busca todos os pesos dos usuários do batch
-      final snapshot = await _weightsCollection
-          .where('userId', whereIn: batch)
-          .orderBy('date', descending: true)
-          .get();
-
-      // Agrupa por userId e pega o mais recente de cada
-      final Map<String, WeightRecordModel> latestByUser = {};
-      for (final doc in snapshot.docs) {
-        final record = WeightRecordModel.fromFirestore(doc);
-        // Só guarda se ainda não tem (o primeiro é o mais recente por causa do orderBy)
-        if (!latestByUser.containsKey(record.userId)) {
-          latestByUser[record.userId] = record;
-        }
+    // Agrupa por userId e pega o mais recente de cada
+    final Map<String, WeightRecordModel> latestByUser = {};
+    for (final json in response) {
+      final record = WeightRecordModel.fromJson(json);
+      // Só guarda se ainda não tem (o primeiro é o mais recente por causa do orderBy)
+      if (!latestByUser.containsKey(record.userId)) {
+        latestByUser[record.userId] = record;
       }
-
-      // Atualiza o resultado
-      latestByUser.forEach((userId, record) {
-        results[userId] = record;
-      });
     }
+
+    // Atualiza o resultado
+    latestByUser.forEach((userId, record) {
+      results[userId] = record;
+    });
 
     return results;
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/weight_service.dart';
@@ -35,10 +35,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   void _loadInitialData() {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      // Tenta separar nome e sobrenome do displayName
-      final nameParts = (user.displayName ?? '').split(' ');
+      // Tenta separar nome e sobrenome do displayName (metadata do OAuth)
+      final userMetadata = user.userMetadata;
+      final fullName = userMetadata?['full_name'] as String? ??
+                       userMetadata?['name'] as String? ?? '';
+      final nameParts = fullName.split(' ');
       if (nameParts.isNotEmpty) {
         _firstNameController.text = nameParts.first;
         if (nameParts.length > 1) {
@@ -82,16 +85,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = Supabase.instance.client.auth.currentUser;
+      final userMetadata = user?.userMetadata;
       final initialWeight = double.tryParse(
         _initialWeightController.text.replaceAll(',', '.'),
       );
+
+      // photoUrl vem do OAuth metadata (Google)
+      final photoUrl = userMetadata?['avatar_url'] as String? ??
+                       userMetadata?['picture'] as String?;
 
       await _userService.createUser(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         email: user?.email ?? '',
-        photoUrl: user?.photoURL,
+        photoUrl: photoUrl,
         height: int.tryParse(_heightController.text),
         initialWeight: initialWeight,
         goalWeight: double.tryParse(_goalWeightController.text.replaceAll(',', '.')),

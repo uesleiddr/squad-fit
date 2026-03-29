@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'core/constants/app_constants.dart';
 import 'core/exceptions/app_exceptions.dart';
 import 'core/theme/app_theme.dart';
@@ -42,7 +42,7 @@ class _SquadFitAppState extends State<SquadFitApp> {
       if (!mounted) return;
 
       // Verifica se usuário está autenticado antes de mostrar dialog
-      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) {
         // Salva o código para usar depois do login (opcional: implementar)
         return;

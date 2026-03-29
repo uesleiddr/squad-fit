@@ -1,84 +1,80 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  bool _initialized = false;
+  final _supabase = Supabase.instance.client;
+
+  // Web Client ID do Google Cloud Console (público por design)
+  static const _webClientId =
+      '489573537640-52f5ded6pgs58tp1463kh3tarlg39eka.apps.googleusercontent.com';
 
   // Stream para ouvir mudanças de autenticação
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
   // Usuário atual
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => _supabase.auth.currentUser;
 
-  // Inicializar Google Sign In
-  Future<void> _initializeGoogleSignIn() async {
-    if (_initialized) return;
-    await _googleSignIn.initialize();
-    _initialized = true;
-  }
+  // Session atual
+  Session? get currentSession => _supabase.auth.currentSession;
 
   // Login com email e senha
-  Future<UserCredential> signInWithEmail(String email, String password) async {
-    return await _auth.signInWithEmailAndPassword(
+  Future<AuthResponse> signInWithEmail(String email, String password) async {
+    return await _supabase.auth.signInWithPassword(
       email: email,
       password: password,
     );
   }
 
   // Cadastro com email e senha
-  Future<UserCredential> signUpWithEmail(String email, String password) async {
-    return await _auth.createUserWithEmailAndPassword(
+  Future<AuthResponse> signUpWithEmail(String email, String password) async {
+    return await _supabase.auth.signUp(
       email: email,
       password: password,
     );
   }
 
-  // Login com Google
-  Future<UserCredential?> signInWithGoogle() async {
-    await _initializeGoogleSignIn();
+  // Login com Google (nativo)
+  Future<AuthResponse> signInWithGoogle() async {
+    final googleSignIn = GoogleSignIn(
+      serverClientId: _webClientId,
+    );
 
-    // Verificar se authenticate é suportado
-    if (!_googleSignIn.supportsAuthenticate()) {
-      throw Exception('Google Sign In não é suportado nesta plataforma');
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) {
+      throw Exception('Login cancelado pelo usuário');
     }
 
-    try {
-      // Autenticar com Google
-      final GoogleSignInAccount account = await _googleSignIn.authenticate();
+    final googleAuth = await googleUser.authentication;
+    final accessToken = googleAuth.accessToken;
+    final idToken = googleAuth.idToken;
 
-      // Obter idToken da autenticacao
-      final String? idToken = account.authentication.idToken;
-
-      if (idToken == null) {
-        throw Exception('Falha ao obter token do Google');
-      }
-
-      // Criar credencial para Firebase (so precisa do idToken)
-      final credential = GoogleAuthProvider.credential(idToken: idToken);
-
-      return await _auth.signInWithCredential(credential);
-    } catch (e) {
-      // Log do erro para debug (só aparece em modo debug)
-      debugPrint('Erro Google Sign In: $e');
-      rethrow;
+    if (accessToken == null) {
+      throw Exception('Access Token não encontrado');
     }
+    if (idToken == null) {
+      throw Exception('ID Token não encontrado');
+    }
+
+    final response = await _supabase.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      accessToken: accessToken,
+    );
+
+    return response;
   }
 
   // Logout
   Future<void> signOut() async {
-    if (_initialized) {
-      try {
-        await _googleSignIn.disconnect();
-      } catch (_) {}
-    }
-    await _auth.signOut();
+    // Faz logout do Google também
+    final googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
+
+    await _supabase.auth.signOut();
   }
 
   // Recuperar senha
   Future<void> resetPassword(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
+    await _supabase.auth.resetPasswordForEmail(email);
   }
 }

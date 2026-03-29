@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 /// Regra de vitória da competição
@@ -18,6 +17,7 @@ class CompetitionModel extends Equatable {
   final DateTime endDate;
   final String inviteCode;
   final VictoryRule victoryRule;
+  final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -30,59 +30,59 @@ class CompetitionModel extends Equatable {
     required this.endDate,
     required this.inviteCode,
     required this.victoryRule,
+    this.status = 'active',
     required this.createdAt,
     required this.updatedAt,
   });
 
   bool get isActive {
     final now = DateTime.now();
-    return now.isAfter(startDate) && now.isBefore(endDate);
+    return now.isAfter(startDate) && now.isBefore(endDate) && status == 'active';
   }
 
   bool get hasEnded => DateTime.now().isAfter(endDate);
 
   bool get hasStarted => DateTime.now().isAfter(startDate);
 
-  factory CompetitionModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory CompetitionModel.fromJson(Map<String, dynamic> json) {
     final now = DateTime.now();
 
-    // Helper para converter Timestamp com null safety
-    DateTime parseTimestamp(dynamic value, DateTime fallback) {
-      if (value is Timestamp) {
-        return value.toDate();
-      }
-      return fallback;
-    }
-
     return CompetitionModel(
-      id: doc.id,
-      name: data['name'] ?? '',
-      description: data['description'],
-      adminId: data['adminId'] ?? '',
-      startDate: parseTimestamp(data['startDate'], now),
-      endDate: parseTimestamp(data['endDate'], now.add(const Duration(days: 30))),
-      inviteCode: data['inviteCode'] ?? '',
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'],
+      adminId: json['admin_id'] ?? '',
+      startDate: json['start_date'] != null
+          ? DateTime.parse(json['start_date'])
+          : now,
+      endDate: json['end_date'] != null
+          ? DateTime.parse(json['end_date'])
+          : now.add(const Duration(days: 30)),
+      inviteCode: json['invite_code'] ?? '',
       victoryRule: VictoryRule.values.firstWhere(
-        (e) => e.name == data['victoryRule'],
+        (e) => e.name == json['victory_rule'],
         orElse: () => VictoryRule.totalWeightLoss,
       ),
-      createdAt: parseTimestamp(data['createdAt'], now),
-      updatedAt: parseTimestamp(data['updatedAt'], now),
+      status: json['status'] ?? 'active',
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : now,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : now,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toJson() {
     return {
       'name': name,
       'description': description,
-      'adminId': adminId,
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
-      'inviteCode': inviteCode,
-      'victoryRule': victoryRule.name,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'admin_id': adminId,
+      'start_date': startDate.toIso8601String().split('T')[0],
+      'end_date': endDate.toIso8601String().split('T')[0],
+      'invite_code': inviteCode,
+      'victory_rule': victoryRule.name,
+      'status': status,
     };
   }
 
@@ -95,6 +95,7 @@ class CompetitionModel extends Equatable {
     DateTime? endDate,
     String? inviteCode,
     VictoryRule? victoryRule,
+    String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -107,6 +108,7 @@ class CompetitionModel extends Equatable {
       endDate: endDate ?? this.endDate,
       inviteCode: inviteCode ?? this.inviteCode,
       victoryRule: victoryRule ?? this.victoryRule,
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -122,6 +124,7 @@ class CompetitionModel extends Equatable {
         endDate,
         inviteCode,
         victoryRule,
+        status,
         createdAt,
         updatedAt,
       ];

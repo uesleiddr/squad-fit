@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class WeightRecordModel extends Equatable {
@@ -16,33 +15,27 @@ class WeightRecordModel extends Equatable {
     required this.createdAt,
   });
 
-  factory WeightRecordModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory WeightRecordModel.fromJson(Map<String, dynamic> json) {
     final now = DateTime.now();
 
-    // Helper para converter Timestamp com null safety
-    DateTime parseTimestamp(dynamic value, DateTime fallback) {
-      if (value is Timestamp) {
-        return value.toDate();
-      }
-      return fallback;
-    }
-
     return WeightRecordModel(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      weight: data['weight']?.toDouble() ?? 0.0,
-      date: parseTimestamp(data['date'], now),
-      createdAt: parseTimestamp(data['createdAt'], now),
+      id: json['id'] ?? '',
+      userId: json['user_id'] ?? '',
+      weight: json['weight']?.toDouble() ?? 0.0,
+      date: json['date'] != null
+          ? DateTime.parse(json['date'])
+          : now,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : now,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
+      'user_id': userId,
       'weight': weight,
-      'date': Timestamp.fromDate(date),
-      'createdAt': Timestamp.fromDate(createdAt),
+      'date': date.toIso8601String().split('T')[0],
     };
   }
 

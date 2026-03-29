@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
 import '../../competition/screens/competition_screen.dart';
@@ -19,10 +19,13 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final userName = user?.displayName ?? 'Usuário';
+    final user = Supabase.instance.client.auth.currentUser;
+    final userMetadata = user?.userMetadata;
+    final userName = userMetadata?['full_name'] as String? ??
+                     userMetadata?['name'] as String? ?? 'Usuário';
     final userEmail = user?.email ?? '';
-    final userPhoto = user?.photoURL;
+    final userPhoto = userMetadata?['avatar_url'] as String? ??
+                      userMetadata?['picture'] as String?;
 
     return Drawer(
       child: SafeArea(
