@@ -26,8 +26,7 @@ class MealSection extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      child: Container(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,7 +37,7 @@ class MealSection extends StatelessWidget {
                 Icon(
                   mealType.icon,
                   size: 24,
-                  color: colorScheme.onSurface,
+                  color: colorScheme.primary.withValues(alpha: 0.7),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -55,18 +54,16 @@ class MealSection extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: totalCalories > 0
                         ? colorScheme.onSurface
-                        : colorScheme.onSurface.withValues(alpha: 0.5),
+                        : colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 4),
-
             // Lista de itens ou "vazio"
             if (items.isEmpty)
               Padding(
-                padding: const EdgeInsets.only(left: 28, top: 4),
+                padding: const EdgeInsets.only(left: 36, top: 8),
                 child: Text(
                   '(vazio)',
                   style: textTheme.bodyMedium?.copyWith(
@@ -77,7 +74,7 @@ class MealSection extends StatelessWidget {
               )
             else
               Padding(
-                padding: const EdgeInsets.only(left: 20),
+                padding: const EdgeInsets.only(left: 20, top: 4),
                 child: Column(
                   children: items
                       .map(

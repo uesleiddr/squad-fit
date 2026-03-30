@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'core/constants/app_constants.dart';
 import 'core/exceptions/app_exceptions.dart';
-import 'core/theme/app_theme.dart';
+import 'core/theme/theme.dart';
+import 'core/theme/util.dart';
 import 'core/di/service_locator.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/competition_service.dart';
@@ -70,12 +71,18 @@ class _SquadFitAppState extends State<SquadFitApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Cria o tema com as fontes escolhidas
+    // Inter para corpo (body), Poppins para títulos (display)
+    final textTheme = createTextTheme(context, "Inter", "Poppins");
+    final theme = MaterialTheme(textTheme);
+
     return MaterialApp(
       title: 'SquadFit',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      themeMode: ThemeMode.light,
+      theme: theme.light(),
+      darkTheme: theme.dark(),
+      themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
         '/': (context) => const AuthWrapper(),

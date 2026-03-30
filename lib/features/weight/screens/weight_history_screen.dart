@@ -186,7 +186,14 @@ class _WeightCard extends StatelessWidget {
       }
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
+      elevation: 2,
+      color: colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),

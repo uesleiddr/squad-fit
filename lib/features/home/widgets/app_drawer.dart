@@ -22,11 +22,14 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     final userMetadata = user?.userMetadata;
-    final userName = userMetadata?['full_name'] as String? ??
-                     userMetadata?['name'] as String? ?? 'Usuário';
+    final userName =
+        userMetadata?['full_name'] as String? ??
+        userMetadata?['name'] as String? ??
+        'Usuário';
     final userEmail = user?.email ?? '';
-    final userPhoto = userMetadata?['avatar_url'] as String? ??
-                      userMetadata?['picture'] as String?;
+    final userPhoto =
+        userMetadata?['avatar_url'] as String? ??
+        userMetadata?['picture'] as String?;
 
     return Drawer(
       child: SafeArea(
@@ -44,9 +47,15 @@ class AppDrawer extends StatelessWidget {
                   CircleAvatar(
                     radius: 32,
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    backgroundImage: userPhoto != null ? NetworkImage(userPhoto) : null,
+                    backgroundImage: userPhoto != null
+                        ? NetworkImage(userPhoto)
+                        : null,
                     child: userPhoto == null
-                        ? const Icon(Icons.person, size: 32, color: Colors.white)
+                        ? const Icon(
+                            Icons.person,
+                            size: 32,
+                            color: Colors.white,
+                          )
                         : null,
                   ),
                   const SizedBox(height: 12),
@@ -56,8 +65,8 @@ class AppDrawer extends StatelessWidget {
                     child: Text(
                       userName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   FittedBox(
@@ -99,8 +108,7 @@ class AppDrawer extends StatelessWidget {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const CompetitionScreen()),
+                  MaterialPageRoute(builder: (_) => const CompetitionScreen()),
                 );
               },
             ),
@@ -112,14 +120,16 @@ class AppDrawer extends StatelessWidget {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const WeightHistoryScreen(),
+                  ),
                 );
               },
             ),
             _DrawerItem(
               icon: Icons.restaurant_menu_outlined,
               selectedIcon: Icons.restaurant_menu,
-              title: 'Nutrição',
+              title: 'Diário',
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(

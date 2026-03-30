@@ -94,7 +94,9 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
       if (mounted) {
         Navigator.pop(context, competition);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Erro ao criar competição: $e');
+      debugPrint('StackTrace: $stackTrace');
       if (mounted) {
         SnackBarHelper.showError(context, 'Não foi possível criar o desafio. Tente novamente.');
       }

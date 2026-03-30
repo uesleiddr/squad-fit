@@ -1,0 +1,279 @@
+-- ============================================
+-- SquadFit - Schema Inicial
+-- ============================================
+-- Migration inicial com todas as tabelas base do app
+-- Criada em: 2026-03-29
+-- ============================================
+
+-- ============================================
+-- TABELA: users (perfis de usuário)
+-- ============================================
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    first_name TEXT NOT NULL DEFAULT '',
+    last_name TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL,
+    photo_url TEXT,
+    initial_weight DECIMAL(5,2),
+    goal_weight DECIMAL(5,2),
+    height INTEGER, -- em cm
+    birth_date DATE,
+    calorie_goal INTEGER NOT NULL DEFAULT 2000,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Trigger para atualizar updated_at automaticamente
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS para users
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own profile"
+    ON users FOR SELECT
+    USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile"
+    ON users FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+    ON users FOR UPDATE
+    USING (auth.uid() = id);
+
+-- Política para permitir leitura de outros usuários (para ranking)
+CREATE POLICY "Users can view other profiles for ranking"
+    ON users FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM competition_participants cp1
+            JOIN competition_participants cp2 ON cp1.competition_id = cp2.competition_id
+            WHERE cp1.user_id = auth.uid()
+            AND cp2.user_id = users.id
+            AND cp1.status = 'active'
+            AND cp2.status = 'active'
+        )
+    );
+
+-- ============================================
+-- TABELA: weight_records (registros de peso)
+-- ============================================
+CREATE TABLE IF NOT EXISTS weight_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    weight DECIMAL(5,2) NOT NULL,
+    date DATE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Um registro por dia por usuário
+    UNIQUE(user_id, date)
+);
+
+-- Índices para performance
+CREATE INDEX IF NOT EXISTS idx_weight_records_user_id ON weight_records(user_id);
+CREATE INDEX IF NOT EXISTS idx_weight_records_date ON weight_records(date DESC);
+CREATE INDEX IF NOT EXISTS idx_weight_records_user_date ON weight_records(user_id, date DESC);
+
+-- RLS para weight_records
+ALTER TABLE weight_records ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own weight records"
+    ON weight_records FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own weight records"
+    ON weight_records FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own weight records"
+    ON weight_records FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own weight records"
+    ON weight_records FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Política para visualizar pesos de participantes da mesma competição
+CREATE POLICY "Users can view weight of competition participants"
+    ON weight_records FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM competition_participants cp1
+            JOIN competition_participants cp2 ON cp1.competition_id = cp2.competition_id
+            WHERE cp1.user_id = auth.uid()
+            AND cp2.user_id = weight_records.user_id
+            AND cp1.status = 'active'
+            AND cp2.status = 'active'
+        )
+    );
+
+-- ============================================
+-- TABELA: competitions (competições/desafios)
+-- ============================================
+CREATE TABLE IF NOT EXISTS competitions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    description TEXT, -- descrição opcional
+    admin_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    invite_code TEXT NOT NULL UNIQUE,
+    victory_rule TEXT NOT NULL DEFAULT 'totalWeightLoss', -- totalWeightLoss ou percentageLoss
+    status TEXT NOT NULL DEFAULT 'active', -- active, ended, cancelled
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Validações
+    CONSTRAINT valid_dates CHECK (end_date > start_date),
+    CONSTRAINT valid_victory_rule CHECK (victory_rule IN ('totalWeightLoss', 'percentageLoss')),
+    CONSTRAINT valid_status CHECK (status IN ('active', 'ended', 'cancelled'))
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_competitions_admin_id ON competitions(admin_id);
+CREATE INDEX IF NOT EXISTS idx_competitions_invite_code ON competitions(invite_code);
+CREATE INDEX IF NOT EXISTS idx_competitions_status ON competitions(status);
+
+-- Trigger para updated_at
+CREATE TRIGGER update_competitions_updated_at
+    BEFORE UPDATE ON competitions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS para competitions
+ALTER TABLE competitions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view competitions they participate in"
+    ON competitions FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM competition_participants
+            WHERE competition_participants.competition_id = competitions.id
+            AND competition_participants.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Anyone can view competition by invite code"
+    ON competitions FOR SELECT
+    USING (true);
+
+CREATE POLICY "Authenticated users can create competitions"
+    ON competitions FOR INSERT
+    WITH CHECK (auth.uid() = admin_id);
+
+CREATE POLICY "Admin can update own competitions"
+    ON competitions FOR UPDATE
+    USING (auth.uid() = admin_id);
+
+CREATE POLICY "Admin can delete own competitions"
+    ON competitions FOR DELETE
+    USING (auth.uid() = admin_id);
+
+-- ============================================
+-- TABELA: competition_participants (participantes)
+-- ============================================
+CREATE TABLE IF NOT EXISTS competition_participants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_id UUID NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    initial_weight DECIMAL(5,2) NOT NULL,
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status TEXT NOT NULL DEFAULT 'active', -- active, removed, archived
+
+    -- Um usuário só pode participar uma vez por competição
+    UNIQUE(competition_id, user_id),
+
+    CONSTRAINT valid_participant_status CHECK (status IN ('active', 'removed', 'archived'))
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_competition_participants_competition_id
+    ON competition_participants(competition_id);
+CREATE INDEX IF NOT EXISTS idx_competition_participants_user_id
+    ON competition_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_competition_participants_status
+    ON competition_participants(status);
+
+-- RLS para competition_participants
+ALTER TABLE competition_participants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view participants of their competitions"
+    ON competition_participants FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM competition_participants cp
+            WHERE cp.competition_id = competition_participants.competition_id
+            AND cp.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Authenticated users can join competitions"
+    ON competition_participants FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own participation"
+    ON competition_participants FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Admin can update participants"
+    ON competition_participants FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM competitions
+            WHERE competitions.id = competition_participants.competition_id
+            AND competitions.admin_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Admin can remove participants"
+    ON competition_participants FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM competitions
+            WHERE competitions.id = competition_participants.competition_id
+            AND competitions.admin_id = auth.uid()
+        )
+    );
+
+-- ============================================
+-- FUNÇÕES AUXILIARES
+-- ============================================
+
+-- Função para criar perfil automaticamente quando usuário se registra
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO users (id, email, first_name, last_name)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
+        COALESCE(NEW.raw_user_meta_data->>'last_name', '')
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger para criar perfil automaticamente
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_new_user();
+
+-- ============================================
+-- HABILITAR REALTIME
+-- ============================================
+ALTER PUBLICATION supabase_realtime ADD TABLE weight_records;
+ALTER PUBLICATION supabase_realtime ADD TABLE competition_participants;
+ALTER PUBLICATION supabase_realtime ADD TABLE competitions;

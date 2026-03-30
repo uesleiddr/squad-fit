@@ -117,6 +117,10 @@ class _UserStatsCardState extends State<UserStatsCard> {
 
     return Card(
       elevation: 2,
+      color: colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

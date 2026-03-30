@@ -123,26 +123,20 @@ class _NutritionScreenState extends State<NutritionScreen> {
     if (result != null && mounted) {
       // TODO: Salvar no banco e atualizar estado
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Refeição adicionada: ${result.description}'),
-        ),
+        SnackBar(content: Text('Refeição adicionada: ${result.description}')),
       );
     }
   }
 
   List<MealItem> _getItemsForMealType(MealType type) {
-    final entry = _mockSummary.meals
-        .where((m) => m.mealType == type)
-        .toList();
+    final entry = _mockSummary.meals.where((m) => m.mealType == type).toList();
 
     if (entry.isEmpty) return [];
     return entry.first.items;
   }
 
   int _getCaloriesForMealType(MealType type) {
-    final entry = _mockSummary.meals
-        .where((m) => m.mealType == type)
-        .toList();
+    final entry = _mockSummary.meals.where((m) => m.mealType == type).toList();
 
     if (entry.isEmpty) return 0;
     return entry.first.totalCalories;
@@ -154,7 +148,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nutrição'),
+        title: const Text('Diário'),
         actions: [
           DateSelector(
             selectedDate: _selectedDate,
@@ -176,24 +170,46 @@ class _NutritionScreenState extends State<NutritionScreen> {
               ),
             ),
 
-            const Divider(height: 1, thickness: 2),
-
-            // Seções de refeição
-            ...MealType.values.map((type) {
-              return Column(
-                children: [
-                  MealSection(
-                    mealType: type,
-                    items: _getItemsForMealType(type),
-                    totalCalories: _getCaloriesForMealType(type),
-                    onTap: () {
-                      // TODO: Expandir ou navegar para detalhes
-                    },
+            // Card com todas as refeições
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
                   ),
-                  const Divider(height: 1, thickness: 2),
-                ],
-              );
-            }),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: MealType.values.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final type = entry.value;
+                    final isLast = index == MealType.values.length - 1;
+
+                    return Column(
+                      children: [
+                        MealSection(
+                          mealType: type,
+                          items: _getItemsForMealType(type),
+                          totalCalories: _getCaloriesForMealType(type),
+                          onTap: () {
+                            // TODO: Expandir ou navegar para detalhes
+                          },
+                        ),
+                        if (!isLast)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

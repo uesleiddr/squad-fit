@@ -19,14 +19,7 @@ class CalorieProgressBar extends StatelessWidget {
     if (isOverGoal) {
       return Theme.of(context).colorScheme.error;
     }
-    final percentage = progress;
-    if (percentage < 0.7) {
-      return Theme.of(context).colorScheme.secondary; // Verde
-    } else if (percentage < 0.9) {
-      return Colors.orange;
-    } else {
-      return Colors.orangeAccent;
-    }
+    return Theme.of(context).colorScheme.primary;
   }
 
   @override
@@ -35,10 +28,10 @@ class CalorieProgressBar extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outline),
-        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,43 +39,49 @@ class CalorieProgressBar extends StatelessWidget {
           // Calorias restantes (ou excedidas)
           Text(
             isOverGoal
-                ? '${(consumed - goal).abs()} kcal excedidas'
-                : '$remaining kcal restantes',
-            style: textTheme.headlineSmall?.copyWith(
+                ? '${(consumed - goal).abs()}'
+                : '$remaining',
+            style: textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: isOverGoal ? colorScheme.error : colorScheme.onSurface,
+              color: isOverGoal ? colorScheme.error : colorScheme.primary,
             ),
           ),
-          const SizedBox(height: 12),
+          Text(
+            isOverGoal ? 'kcal excedidas' : 'kcal restantes',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Barra de progresso
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 12,
-              backgroundColor: colorScheme.outline.withValues(alpha: 0.3),
+              minHeight: 16,
+              backgroundColor: colorScheme.outline.withValues(alpha: 0.2),
               valueColor: AlwaysStoppedAnimation<Color>(
                 _getProgressColor(context),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
           // Meta e consumido
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Meta: $goal',
+                'Meta: $goal kcal',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Text(
-                'Consumido: $consumed',
+                'Consumido: $consumed kcal',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
