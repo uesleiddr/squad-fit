@@ -7,6 +7,7 @@ import '../../../core/models/weight_record_model.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/services/competition_service.dart';
+import '../../../core/widgets/widgets.dart';
 
 /// Dados combinados para o UserStatsCard
 class _UserStatsData {
@@ -74,6 +75,20 @@ class _UserStatsCardState extends State<UserStatsCard> {
     return StreamBuilder<_UserStatsData>(
       stream: _combinedStream,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Card(
+            elevation: 2,
+            color: colorScheme.surfaceContainerLowest,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(40),
+              child: LoadingIndicator(),
+            ),
+          );
+        }
+
         final data = snapshot.data;
 
         return _buildCard(

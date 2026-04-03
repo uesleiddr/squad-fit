@@ -4,6 +4,7 @@ import '../../../core/models/ranking_entry_model.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 
 class RankingList extends StatefulWidget {
   final CompetitionModel? competition;
@@ -39,7 +40,7 @@ class _RankingListState extends State<RankingList> {
             ),
             child: const Padding(
               padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+              child: LoadingIndicator(),
             ),
           );
         }

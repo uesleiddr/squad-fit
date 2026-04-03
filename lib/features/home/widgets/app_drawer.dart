@@ -14,6 +14,14 @@ class AppDrawer extends StatelessWidget {
     Navigator.pop(context);
   }
 
+  /// Navega para uma tela fechando o drawer
+  void _navigateTo(BuildContext context, Widget screen) {
+    Navigator.pop(context);
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => screen),
+    );
+  }
+
   Future<void> _handleSignOut() async {
     await getIt<AuthService>().signOut();
   }
@@ -38,8 +46,8 @@ class AppDrawer extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
+              decoration: const BoxDecoration(
+                // Mesma cor do drawer, sem destaque
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,51 +100,25 @@ class AppDrawer extends StatelessWidget {
               icon: Icons.monitor_weight_outlined,
               selectedIcon: Icons.monitor_weight,
               title: 'Registrar Peso',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddWeightScreen()),
-                );
-              },
+              onTap: () => _navigateTo(context, const AddWeightScreen()),
             ),
             _DrawerItem(
               icon: Icons.emoji_events_outlined,
               selectedIcon: Icons.emoji_events,
               title: 'Desafio',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CompetitionScreen()),
-                );
-              },
+              onTap: () => _navigateTo(context, const CompetitionScreen()),
             ),
             _DrawerItem(
               icon: Icons.history_outlined,
               selectedIcon: Icons.history,
               title: 'Histórico de Peso',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const WeightHistoryScreen(),
-                  ),
-                );
-              },
+              onTap: () => _navigateTo(context, const WeightHistoryScreen()),
             ),
             _DrawerItem(
               icon: Icons.restaurant_menu_outlined,
               selectedIcon: Icons.restaurant_menu,
               title: 'Diário',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NutritionScreen()),
-                );
-              },
+              onTap: () => _navigateTo(context, const NutritionScreen()),
             ),
             const Divider(indent: 16, endIndent: 16),
             _DrawerItem(

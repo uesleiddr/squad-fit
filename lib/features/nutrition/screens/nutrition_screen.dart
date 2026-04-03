@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/widgets.dart';
 import '../models/models.dart';
 import '../widgets/widgets.dart';
 
@@ -12,6 +13,21 @@ class NutritionScreen extends StatefulWidget {
 
 class _NutritionScreenState extends State<NutritionScreen> {
   DateTime _selectedDate = DateTime.now();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    // Simula carregamento de dados do backend
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   // Dados mockados para desenvolvimento
   DailySummary get _mockSummary {
@@ -117,9 +133,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
     });
   }
 
-  Future<void> _openAddMealModal() async {
-    final result = await AddMealModal.show(context);
-
+  void _onMealAdded(MealEntry? result) {
     if (result != null && mounted) {
       // TODO: Salvar no banco e atualizar estado
       ScaffoldMessenger.of(context).showSnackBar(
@@ -146,7 +160,8 @@ class _NutritionScreenState extends State<NutritionScreen> {
   Widget build(BuildContext context) {
     final summary = _mockSummary;
 
-    return Scaffold(
+    return LoadingScaffold(
+      isLoading: _isLoading,
       appBar: AppBar(
         title: const Text('Diário'),
         actions: [
@@ -157,14 +172,17 @@ class _NutritionScreenState extends State<NutritionScreen> {
           const SizedBox(width: 8),
         ],
       ),
+      floatingActionButton: AddMealFab(
+        onMealAdded: _onMealAdded,
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Barra de progresso de calorias
+            // Progresso circular de calorias
             Padding(
               padding: const EdgeInsets.all(16),
-              child: CalorieProgressBar(
+              child: CircularCalorieProgress(
                 consumed: summary.totalCalories,
                 goal: summary.calorieGoal,
               ),
@@ -212,10 +230,6 @@ class _NutritionScreenState extends State<NutritionScreen> {
             const SizedBox(height: 16),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddMealModal,
-        child: const Icon(Icons.add),
       ),
     );
   }

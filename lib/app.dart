@@ -11,6 +11,7 @@ import 'core/services/weight_service.dart';
 import 'core/services/user_service.dart';
 import 'core/utils/invite_code_validator.dart';
 import 'core/utils/snackbar_helper.dart';
+import 'core/widgets/widgets.dart';
 import 'features/auth/screens/auth_wrapper.dart';
 import 'features/home/screens/home_screen.dart';
 
@@ -82,7 +83,7 @@ class _SquadFitAppState extends State<SquadFitApp> {
       debugShowCheckedModeBanner: false,
       theme: theme.light(),
       darkTheme: theme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark, // TODO: voltar para ThemeMode.system
       initialRoute: '/',
       routes: {
         '/': (context) => const AuthWrapper(),
@@ -161,14 +162,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
             foregroundColor: Colors.white,
           ),
           child: _isLoading
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
+              ? const ButtonLoadingIndicator(size: 16)
               : const Text('Sim, entrar!'),
         ),
       ],

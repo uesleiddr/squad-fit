@@ -4,6 +4,7 @@ import '../../../core/services/weight_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 
 class AddWeightScreen extends StatefulWidget {
   const AddWeightScreen({super.key});
@@ -189,14 +190,7 @@ class _AddWeightScreenState extends State<AddWeightScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _saveWeight,
                     icon: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
+                        ? const ButtonLoadingIndicator()
                         : const Icon(Icons.check),
                     label: Text(
                       _isLoading ? 'Salvando...' : 'Registrar Peso',

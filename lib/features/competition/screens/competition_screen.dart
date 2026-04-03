@@ -8,6 +8,7 @@ import '../../../core/services/deep_link_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../home/widgets/ranking_list.dart';
 import '../widgets/create_competition_modal.dart';
 import '../widgets/edit_competition_modal.dart';
@@ -256,7 +257,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
     CompetitionModel? currentCompetition,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingIndicator();
     }
 
     if (snapshot.hasError) {

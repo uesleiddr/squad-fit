@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/design_system.dart';
 
 /// Widget que exibe a barra de progresso de calorias do dia
 class CalorieProgressBar extends StatelessWidget {
@@ -17,46 +18,55 @@ class CalorieProgressBar extends StatelessWidget {
 
   Color _getProgressColor(BuildContext context) {
     if (isOverGoal) {
-      return Theme.of(context).colorScheme.error;
+      return AppColors.error;
     }
-    return Theme.of(context).colorScheme.primary;
+    return AppColors.primary;
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Calorias restantes (ou excedidas)
-          Text(
-            isOverGoal
-                ? '${(consumed - goal).abs()}'
-                : '$remaining',
-            style: textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isOverGoal ? colorScheme.error : colorScheme.primary,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                isOverGoal
+                    ? '${(consumed - goal).abs()}'
+                    : '$remaining',
+                style: AppTypography.statNumber(
+                  context,
+                  color: isOverGoal ? AppColors.error : null,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.local_fire_department,
+                color: AppColors.primary,
+                size: 40,
+              ),
+            ],
           ),
+          const SizedBox(height: 4),
           Text(
             isOverGoal ? 'kcal excedidas' : 'kcal restantes',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+            style: AppTypography.unit(context),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
 
           // Barra de progresso
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: AppRadius.radiusSm,
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 16,
@@ -66,7 +76,7 @@ class CalorieProgressBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.sm),
 
           // Meta e consumido
           Row(
@@ -74,15 +84,11 @@ class CalorieProgressBar extends StatelessWidget {
             children: [
               Text(
                 'Meta: $goal kcal',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
+                style: AppTypography.bodySecondary(context),
               ),
               Text(
                 'Consumido: $consumed kcal',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
+                style: AppTypography.bodySecondary(context),
               ),
             ],
           ),
