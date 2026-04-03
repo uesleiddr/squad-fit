@@ -81,9 +81,7 @@ class _SquadFitAppState extends State<SquadFitApp> {
       title: 'SquadFit',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: theme.light(),
-      darkTheme: theme.dark(),
-      themeMode: ThemeMode.dark, // TODO: voltar para ThemeMode.system
+      theme: theme.dark(),
       initialRoute: '/',
       routes: {
         '/': (context) => const AuthWrapper(),

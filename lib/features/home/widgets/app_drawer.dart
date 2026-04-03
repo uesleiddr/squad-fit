@@ -4,8 +4,7 @@ import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
 import '../../competition/screens/competition_screen.dart';
 import '../../nutrition/screens/screens.dart';
-import '../../weight/screens/add_weight_screen.dart';
-import '../../weight/screens/weight_history_screen.dart';
+import '../../weight/screens/weight_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -99,20 +98,14 @@ class AppDrawer extends StatelessWidget {
             _DrawerItem(
               icon: Icons.monitor_weight_outlined,
               selectedIcon: Icons.monitor_weight,
-              title: 'Registrar Peso',
-              onTap: () => _navigateTo(context, const AddWeightScreen()),
+              title: 'Peso',
+              onTap: () => _navigateTo(context, const WeightScreen()),
             ),
             _DrawerItem(
               icon: Icons.emoji_events_outlined,
               selectedIcon: Icons.emoji_events,
               title: 'Desafio',
               onTap: () => _navigateTo(context, const CompetitionScreen()),
-            ),
-            _DrawerItem(
-              icon: Icons.history_outlined,
-              selectedIcon: Icons.history,
-              title: 'Histórico de Peso',
-              onTap: () => _navigateTo(context, const WeightHistoryScreen()),
             ),
             _DrawerItem(
               icon: Icons.restaurant_menu_outlined,

@@ -64,13 +64,11 @@ dev_dependencies:
   flutter_native_splash: ^2.4.7
 
 flutter_native_splash:
-  color: "#FFFFFF"
-  color_dark: "#1A1A2E"
-  image: assets/splash/splash_logo.png
+  color: "#1A1A2E"
+  image: assets/logo/SquadFit-logo-transparent.png
   android_12:
-    color: "#FFFFFF"
-    color_dark: "#1A1A2E"
-    image: assets/splash/splash_logo.png
+    color: "#1A1A2E"
+    image: assets/logo/SquadFit-logo-transparent.png
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -85,6 +83,7 @@ flutter:
 
   assets:
     - assets/animations/
+    - assets/logo/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

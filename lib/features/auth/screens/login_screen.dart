@@ -164,20 +164,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'SquadFit',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                    textAlign: TextAlign.center,
+                  const SizedBox(height: 32),
+                  Image.asset(
+                    'assets/logo/SquadFit-logo-transparent.png',
+                    height: 200,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 24),
                   Text(
                     _isLogin ? 'Entre na sua conta' : 'Crie sua conta',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -192,7 +189,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: AppColors.error),
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppColors.error,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -285,7 +285,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       'https://www.google.com/favicon.ico',
                       height: 18,
                       width: 18,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata),
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.g_mobiledata),
                     ),
                     label: const Text('Continuar com Google'),
                     style: OutlinedButton.styleFrom(
