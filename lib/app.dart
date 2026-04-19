@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'core/constants/app_constants.dart';
 import 'core/exceptions/app_exceptions.dart';
-import 'core/theme/app_theme.dart';
+import 'core/theme/theme.dart';
+import 'core/theme/util.dart';
 import 'core/di/service_locator.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/competition_service.dart';
@@ -10,6 +11,7 @@ import 'core/services/weight_service.dart';
 import 'core/services/user_service.dart';
 import 'core/utils/invite_code_validator.dart';
 import 'core/utils/snackbar_helper.dart';
+import 'core/widgets/widgets.dart';
 import 'features/auth/screens/auth_wrapper.dart';
 import 'features/home/screens/home_screen.dart';
 
@@ -70,12 +72,16 @@ class _SquadFitAppState extends State<SquadFitApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Cria o tema com as fontes escolhidas
+    // Inter para corpo (body), Poppins para títulos (display)
+    final textTheme = createTextTheme(context, "Inter", "Poppins");
+    final theme = MaterialTheme(textTheme);
+
     return MaterialApp(
       title: 'SquadFit',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      themeMode: ThemeMode.light,
+      theme: theme.dark(),
       initialRoute: '/',
       routes: {
         '/': (context) => const AuthWrapper(),
@@ -154,14 +160,7 @@ class _JoinConfirmationDialogState extends State<_JoinConfirmationDialog> {
             foregroundColor: Colors.white,
           ),
           child: _isLoading
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
+              ? const ButtonLoadingIndicator(size: 16)
               : const Text('Sim, entrar!'),
         ),
       ],

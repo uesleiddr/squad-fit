@@ -4,6 +4,7 @@ import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 
 class EditCompetitionModal extends StatefulWidget {
   final CompetitionModel competition;
@@ -228,15 +229,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
                         ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
+                          ? const ButtonLoadingIndicator()
                           : const Text('Salvar'),
                     ),
                   ),

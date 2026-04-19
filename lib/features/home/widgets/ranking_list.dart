@@ -4,6 +4,7 @@ import '../../../core/models/ranking_entry_model.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 
 class RankingList extends StatefulWidget {
   final CompetitionModel? competition;
@@ -31,10 +32,15 @@ class _RankingListState extends State<RankingList> {
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Card(
-            child: Padding(
+          return Card(
+            elevation: 2,
+            color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Padding(
               padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+              child: LoadingIndicator(),
             ),
           );
         }
@@ -65,6 +71,11 @@ class _RankingListState extends State<RankingList> {
     List<RankingEntryModel> rankings,
   ) {
     return Card(
+      elevation: 2,
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -122,7 +133,11 @@ class _RankingListState extends State<RankingList> {
     final isCurrentUserWinner = winner.isCurrentUser;
 
     return Card(
-      elevation: 4,
+      elevation: 2,
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -364,6 +379,11 @@ class _RankingListState extends State<RankingList> {
 
   Widget _buildEmptyState(BuildContext context, String message) {
     return Card(
+      elevation: 2,
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Center(

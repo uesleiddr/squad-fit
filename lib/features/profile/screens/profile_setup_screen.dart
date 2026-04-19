@@ -6,6 +6,7 @@ import '../../../core/services/weight_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/widgets.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -261,14 +262,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       foregroundColor: Colors.white,
                     ),
                     child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
+                        ? const ButtonLoadingIndicator()
                         : const Text(
                             'Começar',
                             style: TextStyle(fontSize: 16),

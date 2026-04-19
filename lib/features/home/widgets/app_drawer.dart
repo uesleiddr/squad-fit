@@ -3,14 +3,22 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
 import '../../competition/screens/competition_screen.dart';
-import '../../weight/screens/add_weight_screen.dart';
-import '../../weight/screens/weight_history_screen.dart';
+import '../../nutrition/screens/screens.dart';
+import '../../weight/screens/weight_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
   void _handleTap(BuildContext context) {
     Navigator.pop(context);
+  }
+
+  /// Navega para uma tela fechando o drawer
+  void _navigateTo(BuildContext context, Widget screen) {
+    Navigator.pop(context);
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => screen),
+    );
   }
 
   Future<void> _handleSignOut() async {
@@ -21,11 +29,14 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     final userMetadata = user?.userMetadata;
-    final userName = userMetadata?['full_name'] as String? ??
-                     userMetadata?['name'] as String? ?? 'Usuário';
+    final userName =
+        userMetadata?['full_name'] as String? ??
+        userMetadata?['name'] as String? ??
+        'Usuário';
     final userEmail = user?.email ?? '';
-    final userPhoto = userMetadata?['avatar_url'] as String? ??
-                      userMetadata?['picture'] as String?;
+    final userPhoto =
+        userMetadata?['avatar_url'] as String? ??
+        userMetadata?['picture'] as String?;
 
     return Drawer(
       child: SafeArea(
@@ -34,8 +45,8 @@ class AppDrawer extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
+              decoration: const BoxDecoration(
+                // Mesma cor do drawer, sem destaque
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,9 +54,15 @@ class AppDrawer extends StatelessWidget {
                   CircleAvatar(
                     radius: 32,
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    backgroundImage: userPhoto != null ? NetworkImage(userPhoto) : null,
+                    backgroundImage: userPhoto != null
+                        ? NetworkImage(userPhoto)
+                        : null,
                     child: userPhoto == null
-                        ? const Icon(Icons.person, size: 32, color: Colors.white)
+                        ? const Icon(
+                            Icons.person,
+                            size: 32,
+                            color: Colors.white,
+                          )
                         : null,
                   ),
                   const SizedBox(height: 12),
@@ -55,8 +72,8 @@ class AppDrawer extends StatelessWidget {
                     child: Text(
                       userName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   FittedBox(
@@ -81,39 +98,20 @@ class AppDrawer extends StatelessWidget {
             _DrawerItem(
               icon: Icons.monitor_weight_outlined,
               selectedIcon: Icons.monitor_weight,
-              title: 'Registrar Peso',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddWeightScreen()),
-                );
-              },
+              title: 'Peso',
+              onTap: () => _navigateTo(context, const WeightScreen()),
             ),
             _DrawerItem(
               icon: Icons.emoji_events_outlined,
               selectedIcon: Icons.emoji_events,
               title: 'Desafio',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const CompetitionScreen()),
-                );
-              },
+              onTap: () => _navigateTo(context, const CompetitionScreen()),
             ),
             _DrawerItem(
-              icon: Icons.history_outlined,
-              selectedIcon: Icons.history,
-              title: 'Histórico de Peso',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
-                );
-              },
+              icon: Icons.restaurant_menu_outlined,
+              selectedIcon: Icons.restaurant_menu,
+              title: 'Diário',
+              onTap: () => _navigateTo(context, const NutritionScreen()),
             ),
             const Divider(indent: 16, endIndent: 16),
             _DrawerItem(

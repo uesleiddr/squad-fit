@@ -5,6 +5,7 @@ import '../../../core/services/weight_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 import 'add_weight_screen.dart';
 
 class WeightHistoryScreen extends StatefulWidget {
@@ -70,7 +71,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
         stream: _weightService.getWeightHistoryStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingIndicator();
           }
 
           if (snapshot.hasError) {
@@ -186,7 +187,14 @@ class _WeightCard extends StatelessWidget {
       }
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
+      elevation: 2,
+      color: colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
