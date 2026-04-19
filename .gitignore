@@ -49,3 +49,9 @@ app.*.map.json
 
 # Supabase
 supabase/.temp/
+
+# Large data files (embeddings are stored in Supabase pgvector)
+assets/data/food_vectors.json
+
+# Node modules in scripts
+scripts/node_modules/

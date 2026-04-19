@@ -44,23 +44,40 @@ class AddMealFab extends StatelessWidget {
 /// Tela de adicionar refeição (usada com Container Transform)
 class AddMealScreen extends StatefulWidget {
   final void Function({MealEntry? returnValue}) onClose;
+  final MealType? initialMealType;
 
-  const AddMealScreen({super.key, required this.onClose});
+  const AddMealScreen({
+    super.key,
+    required this.onClose,
+    this.initialMealType,
+  });
+
+  /// Abre a tela como modal (Navigator.push)
+  static Future<MealEntry?> open(BuildContext context, {MealType? mealType}) {
+    return Navigator.of(context).push<MealEntry>(
+      MaterialPageRoute(
+        builder: (context) => AddMealScreen(
+          onClose: ({MealEntry? returnValue}) => Navigator.of(context).pop(returnValue),
+          initialMealType: mealType,
+        ),
+      ),
+    );
+  }
 
   @override
   State<AddMealScreen> createState() => _AddMealScreenState();
 }
 
 class _AddMealScreenState extends State<AddMealScreen> {
-  final _fatsecretService = getIt<FatSecretService>();
+  final _nutritionService = getIt<NutritionService>();
   MealType _selectedMealType = MealType.breakfast;
   final List<FoodWithQuantity> _selectedFoods = [];
-  bool _isSearchingOnline = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedMealType = _suggestMealType();
+    _selectedMealType = widget.initialMealType ?? _suggestMealType();
   }
 
   MealType _suggestMealType() {
@@ -84,63 +101,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
     }
   }
 
-  Future<void> _searchOnline(String query) async {
-    setState(() => _isSearchingOnline = true);
-
-    try {
-      final results = await _fatsecretService.searchFoods(query);
-      if (!mounted) return;
-
-      if (results.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nenhum resultado encontrado online')),
-        );
-        setState(() => _isSearchingOnline = false);
-        return;
-      }
-
-      // Mostra dialog com resultados do FatSecret
-      final selected = await showDialog<FoodSearchResult>(
-        context: context,
-        builder: (context) => _OnlineSearchResultsDialog(results: results),
-      );
-
-      if (selected != null && mounted) {
-        // Busca dados nutricionais completos
-        final nutrition = await _fatsecretService.getFoodNutrition(selected.foodId);
-
-        if (nutrition != null && mounted) {
-          // Converte para BrazilianFood para usar o mesmo modal de quantidade
-          final food = BrazilianFood(
-            codigo: 'FS_${nutrition.foodId}',
-            name: nutrition.foodName,
-            calories: nutrition.calories.toDouble(),
-            protein: nutrition.protein,
-            carbs: nutrition.carbs,
-            fat: nutrition.fat,
-            source: 'fatsecret',
-          );
-          _onFoodSelected(food);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro na busca online: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSearchingOnline = false);
-      }
-    }
-  }
-
   void _removeFood(int index) {
     setState(() => _selectedFoods.removeAt(index));
   }
 
-  void _submitMeal() {
+  Future<void> _submitMeal() async {
     if (_selectedFoods.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Adicione pelo menos um alimento')),
@@ -148,25 +113,16 @@ class _AddMealScreenState extends State<AddMealScreen> {
       return;
     }
 
-    final now = DateTime.now();
-    final totalCalories = _selectedFoods.fold<double>(0, (sum, f) => sum + f.calories);
-    final totalProtein = _selectedFoods.fold<double>(0, (sum, f) => sum + f.protein);
-    final totalCarbs = _selectedFoods.fold<double>(0, (sum, f) => sum + f.carbs);
-    final totalFat = _selectedFoods.fold<double>(0, (sum, f) => sum + f.fat);
+    setState(() => _isSaving = true);
 
-    final mealEntry = MealEntry(
-      id: 'meal_${now.millisecondsSinceEpoch}',
-      userId: '', // Será preenchido pelo serviço
-      mealType: _selectedMealType,
-      description: _selectedFoods.map((f) => f.name).join(', '),
-      totalCalories: totalCalories.round(),
-      totalProtein: totalProtein,
-      totalCarbs: totalCarbs,
-      totalFat: totalFat,
-      items: _selectedFoods.asMap().entries.map((entry) {
+    try {
+      final now = DateTime.now();
+      final description = _selectedFoods.map((f) => f.name).join(', ');
+
+      final items = _selectedFoods.asMap().entries.map((entry) {
         return MealItem(
-          id: 'item_${now.millisecondsSinceEpoch}_${entry.key}',
-          mealEntryId: 'meal_${now.millisecondsSinceEpoch}',
+          id: '',
+          mealEntryId: '',
           name: entry.value.name,
           quantity: entry.value.quantity,
           unit: entry.value.unit,
@@ -176,12 +132,23 @@ class _AddMealScreenState extends State<AddMealScreen> {
           fat: entry.value.fat,
           createdAt: now,
         );
-      }).toList(),
-      recordedAt: now,
-      createdAt: now,
-    );
+      }).toList();
 
-    widget.onClose(returnValue: mealEntry);
+      final savedEntry = await _nutritionService.saveMealEntry(
+        mealType: _selectedMealType,
+        description: description,
+        items: items,
+      );
+
+      widget.onClose(returnValue: savedEntry);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao salvar: $e')),
+        );
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   double get _totalCalories =>
@@ -260,19 +227,10 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   ),
                   SizedBox(height: AppSpacing.md),
 
-                  if (_isSearchingOnline)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else
-                    FoodSearchField(
-                      onFoodSelected: _onFoodSelected,
-                      onSearchOnline: _searchOnline,
-                      hintText: 'Digite o nome do alimento...',
-                    ),
+                  FoodSearchField(
+                    onFoodSelected: _onFoodSelected,
+                    hintText: 'Digite o nome do alimento...',
+                  ),
 
                   SizedBox(height: AppSpacing.xl),
 
@@ -344,61 +302,18 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   height: 48,
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _submitMeal,
-                    child: Text(
-                      'Registrar Refeição (${_totalCalories.toStringAsFixed(0)} kcal)',
-                    ),
+                    onPressed: _isSaving ? null : _submitMeal,
+                    child: _isSaving
+                        ? const ButtonLoadingIndicator()
+                        : Text(
+                            'Registrar Refeição (${_totalCalories.toStringAsFixed(0)} kcal)',
+                          ),
                   ),
                 ),
               ),
             ),
         ],
       ),
-    );
-  }
-}
-
-/// Dialog para mostrar resultados da busca online (FatSecret)
-class _OnlineSearchResultsDialog extends StatelessWidget {
-  final List<FoodSearchResult> results;
-
-  const _OnlineSearchResultsDialog({required this.results});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return AlertDialog(
-      title: const Text('Resultados Online'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: results.length,
-          itemBuilder: (context, index) {
-            final food = results[index];
-            return ListTile(
-              title: Text(food.foodName),
-              subtitle: Text(
-                food.foodDescription,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: Icon(
-                Icons.add_circle_outline,
-                color: colorScheme.primary,
-              ),
-              onTap: () => Navigator.of(context).pop(food),
-            );
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-      ],
     );
   }
 }

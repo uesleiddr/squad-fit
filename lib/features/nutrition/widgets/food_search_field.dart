@@ -7,19 +7,14 @@ import '../services/services.dart';
 /// Callback quando um alimento é selecionado
 typedef OnFoodSelected = void Function(BrazilianFood food);
 
-/// Callback para busca online (FatSecret)
-typedef OnSearchOnline = void Function(String query);
-
 /// Campo de busca com autocomplete para alimentos brasileiros
 class FoodSearchField extends StatefulWidget {
   final OnFoodSelected onFoodSelected;
-  final OnSearchOnline? onSearchOnline;
   final String? hintText;
 
   const FoodSearchField({
     super.key,
     required this.onFoodSelected,
-    this.onSearchOnline,
     this.hintText,
   });
 
@@ -30,11 +25,25 @@ class FoodSearchField extends StatefulWidget {
 class _FoodSearchFieldState extends State<FoodSearchField> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  final _brazilianFoodService = getIt<BrazilianFoodService>();
+  final _ragService = getIt<RagFoodSearchService>();
 
   List<BrazilianFood> _suggestions = [];
   bool _isLoading = false;
+  bool _isOnline = false;
   Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+  }
+
+  Future<void> _checkConnectivity() async {
+    final online = await _ragService.hasConnectivity();
+    if (mounted) {
+      setState(() => _isOnline = online);
+    }
+  }
 
   @override
   void dispose() {
@@ -60,11 +69,13 @@ class _FoodSearchFieldState extends State<FoodSearchField> {
     setState(() => _isLoading = true);
 
     try {
-      final results = await _brazilianFoodService.searchFoods(query, limit: 8);
+      // Usa RAG service (automático: semântico online, local offline)
+      final results = await _ragService.search(query, limit: 8);
       if (mounted) {
         setState(() {
           _suggestions = results;
           _isLoading = false;
+          _isOnline = _ragService.lastKnownConnectivity;
         });
       }
     } catch (e) {
@@ -84,13 +95,6 @@ class _FoodSearchFieldState extends State<FoodSearchField> {
     widget.onFoodSelected(food);
   }
 
-  void _searchOnline() {
-    final query = _controller.text.trim();
-    if (query.isNotEmpty && widget.onSearchOnline != null) {
-      widget.onSearchOnline!(query);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -107,7 +111,25 @@ class _FoodSearchFieldState extends State<FoodSearchField> {
           onChanged: _onQueryChanged,
           decoration: InputDecoration(
             hintText: widget.hintText ?? 'Buscar alimento...',
-            prefixIcon: const Icon(Icons.search),
+            prefixIcon: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.search),
+                // Indicador de modo (online/offline)
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _isOnline ? Colors.green : Colors.grey,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             suffixIcon: _isLoading
                 ? const Padding(
                     padding: EdgeInsets.all(12),
@@ -156,35 +178,25 @@ class _FoodSearchFieldState extends State<FoodSearchField> {
                   shrinkWrap: true,
                   padding: EdgeInsets.zero,
                   children: [
-                    // Resultados locais
+                    // Resultados
                     ..._suggestions.map((food) => _FoodSuggestionTile(
                           food: food,
                           onTap: () => _selectFood(food),
                         )),
 
-                    // Botão buscar online (se não encontrou ou quer mais)
-                    if (widget.onSearchOnline != null && _controller.text.length >= 2)
+                    // Mensagem se não encontrou
+                    if (_suggestions.isEmpty && _controller.text.length >= 2)
                       ListTile(
                         leading: Icon(
-                          Icons.travel_explore,
-                          color: colorScheme.primary,
+                          Icons.search_off,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                         title: Text(
-                          'Buscar online',
+                          'Nenhum alimento encontrado',
                           style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        subtitle: Text(
-                          _suggestions.isEmpty
-                              ? 'Não encontrado na base local'
-                              : 'Buscar mais opções',
-                          style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        onTap: _searchOnline,
                       ),
                   ],
                 ),

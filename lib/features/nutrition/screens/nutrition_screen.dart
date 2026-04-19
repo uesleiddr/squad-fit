@@ -67,25 +67,30 @@ class _NutritionScreenState extends State<NutritionScreen> {
     }
   }
 
+  Future<void> _openAddMealScreen(MealType mealType) async {
+    final result = await AddMealScreen.open(context, mealType: mealType);
+    _onMealAdded(result);
+  }
+
   List<MealItem> _getItemsForMealType(MealType type) {
     if (_summary == null) return [];
-    final entry = _summary!.meals.where((m) => m.mealType == type).toList();
-    if (entry.isEmpty) return [];
-    return entry.first.items;
+    final entries = _summary!.meals.where((m) => m.mealType == type).toList();
+    if (entries.isEmpty) return [];
+    // Agrega itens de todas as refeições do mesmo tipo
+    return entries.expand((e) => e.items).toList();
   }
 
   int _getCaloriesForMealType(MealType type) {
     if (_summary == null) return 0;
-    final entry = _summary!.meals.where((m) => m.mealType == type).toList();
-    if (entry.isEmpty) return 0;
-    return entry.first.totalCalories;
+    final entries = _summary!.meals.where((m) => m.mealType == type).toList();
+    if (entries.isEmpty) return 0;
+    // Soma calorias de todas as refeições do mesmo tipo
+    return entries.fold(0, (sum, e) => sum + e.totalCalories);
   }
 
-  MealEntry? _getMealEntryForType(MealType type) {
-    if (_summary == null) return null;
-    final entries = _summary!.meals.where((m) => m.mealType == type).toList();
-    if (entries.isEmpty) return null;
-    return entries.first;
+  List<MealEntry> _getMealEntriesForType(MealType type) {
+    if (_summary == null) return [];
+    return _summary!.meals.where((m) => m.mealType == type).toList();
   }
 
   Future<void> _deleteMealEntry(MealEntry entry) async {
@@ -139,11 +144,44 @@ class _NutritionScreenState extends State<NutritionScreen> {
             ListTile(
               leading: const Icon(Icons.delete_outline),
               title: const Text('Excluir refeição'),
+              subtitle: Text(entry.description, maxLines: 1, overflow: TextOverflow.ellipsis),
               onTap: () {
                 Navigator.pop(context);
                 _deleteMealEntry(entry);
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMealSelectionDialog(List<MealEntry> entries) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Selecione a refeição',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            ...entries.map((entry) => ListTile(
+              leading: const Icon(Icons.restaurant),
+              title: Text(entry.description, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text('${entry.totalCalories} kcal'),
+              trailing: IconButton(
+                icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _deleteMealEntry(entry);
+                },
+              ),
+            )),
           ],
         ),
       ),
@@ -165,9 +203,6 @@ class _NutritionScreenState extends State<NutritionScreen> {
           ),
           const SizedBox(width: 8),
         ],
-      ),
-      floatingActionButton: AddMealFab(
-        onMealAdded: _onMealAdded,
       ),
       body: _error != null
           ? Center(
@@ -221,10 +256,13 @@ class _NutritionScreenState extends State<NutritionScreen> {
                           mealType: type,
                           items: _getItemsForMealType(type),
                           totalCalories: _getCaloriesForMealType(type),
+                          onAddMeal: () => _openAddMealScreen(type),
                           onTap: () {
-                            final entry = _getMealEntryForType(type);
-                            if (entry != null) {
-                              _showMealOptions(entry);
+                            final entries = _getMealEntriesForType(type);
+                            if (entries.length == 1) {
+                              _showMealOptions(entries.first);
+                            } else if (entries.length > 1) {
+                              _showMealSelectionDialog(entries);
                             }
                           },
                         ),

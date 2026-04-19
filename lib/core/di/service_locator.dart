@@ -22,6 +22,13 @@ void setupServiceLocator() {
   getIt.registerLazySingleton<FatSecretService>(() => FatSecretService());
   getIt.registerLazySingleton<GeminiNutritionService>(() => GeminiNutritionService());
   getIt.registerLazySingleton<NutritionService>(() => NutritionService());
+
+  // RAG services
+  getIt.registerLazySingleton<FoodVectorStore>(() => FoodVectorStore());
+  getIt.registerLazySingleton<RagFoodSearchService>(() => RagFoodSearchService(
+        vectorStore: getIt<FoodVectorStore>(),
+        localService: getIt<BrazilianFoodService>(),
+      ));
 }
 
 /// Reset para testes

@@ -301,6 +301,70 @@ class NutritionService {
     await _supabase.from('meal_entries').delete().eq('id', entryId);
   }
 
+  /// Salva uma refeição já estruturada (com itens pré-selecionados)
+  ///
+  /// Usado quando os alimentos foram selecionados manualmente via busca
+  Future<MealEntry> saveMealEntry({
+    required MealType mealType,
+    required String description,
+    required List<MealItem> items,
+    DateTime? recordedAt,
+  }) async {
+    if (_userId == null) {
+      throw AuthException.notAuthenticated;
+    }
+
+    if (items.isEmpty) {
+      throw ValidationException('A refeição deve ter pelo menos um item');
+    }
+
+    final totalCalories = items.fold<int>(0, (sum, item) => sum + item.calories);
+    final totalProtein = items.fold<double>(0, (sum, item) => sum + item.protein);
+    final totalCarbs = items.fold<double>(0, (sum, item) => sum + item.carbs);
+    final totalFat = items.fold<double>(0, (sum, item) => sum + item.fat);
+
+    dev.log('💾 Salvando refeição: $description', name: 'Nutrition');
+    dev.log('   Items: ${items.length} | Total: $totalCalories kcal', name: 'Nutrition');
+
+    final entryResponse = await _supabase.from('meal_entries').insert({
+      'user_id': _userId,
+      'meal_type': mealType.name,
+      'description': description,
+      'total_calories': totalCalories,
+      'total_protein': totalProtein,
+      'total_carbs': totalCarbs,
+      'total_fat': totalFat,
+      'recorded_at': (recordedAt ?? DateTime.now()).toIso8601String(),
+    }).select().single();
+
+    final entryId = entryResponse['id'] as String;
+
+    final itemsToInsert = items.map((item) => {
+      'meal_entry_id': entryId,
+      'name': item.name,
+      'quantity': item.quantity,
+      'unit': item.unit,
+      'calories': item.calories,
+      'protein': item.protein,
+      'carbs': item.carbs,
+      'fat': item.fat,
+      'fatsecret_food_id': item.fatsecretFoodId,
+    }).toList();
+
+    final itemsResponse = await _supabase
+        .from('meal_items')
+        .insert(itemsToInsert)
+        .select();
+
+    final savedItems = (itemsResponse as List)
+        .map((json) => MealItem.fromJson(json))
+        .toList();
+
+    dev.log('✅ Refeição salva com ID: $entryId', name: 'Nutrition');
+
+    return MealEntry.fromJson(entryResponse, items: savedItems);
+  }
+
   /// Verifica se a unidade é de peso (g, kg)
   bool _isWeightUnit(String unit) {
     const weightUnits = ['g', 'kg', 'grama', 'gramas', 'quilograma', 'quilogramas'];

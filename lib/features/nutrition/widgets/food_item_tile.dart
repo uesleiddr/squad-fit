@@ -15,8 +15,8 @@ class FoodItemTile extends StatelessWidget {
   String get _quantityText {
     final qty = item.quantity;
     // Remove decimais desnecessários (2.0 -> 2)
-    final qtyStr = qty == qty.roundToDouble() ? qty.toInt().toString() : qty.toString();
-    return '${qtyStr}x';
+    final qtyStr = qty == qty.roundToDouble() ? qty.toInt().toString() : qty.toStringAsFixed(1);
+    return '$qtyStr ${item.unit}';
   }
 
   @override
@@ -28,16 +28,14 @@ class FoodItemTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: Row(
         children: [
-          // Quantidade
-          SizedBox(
-            width: 32,
-            child: Text(
-              _quantityText,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+          // Quantidade + unidade
+          Text(
+            _quantityText,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
+          const SizedBox(width: 8),
 
           // Nome do item
           Expanded(

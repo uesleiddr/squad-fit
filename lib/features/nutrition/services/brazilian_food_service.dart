@@ -63,6 +63,15 @@ class BrazilianFoodService {
   List<BrazilianFood>? _allFoods;
   bool _isLoaded = false;
 
+  /// Retorna todos os alimentos carregados (para uso em busca híbrida)
+  List<BrazilianFood> get allFoods => _allFoods ?? [];
+
+  /// Verifica se os dados foram carregados
+  bool get isLoaded => _isLoaded;
+
+  /// Carrega os dados (pode ser chamado externamente para pré-carregar)
+  Future<void> loadData() async => _loadData();
+
   /// Carrega os dados de ambos os JSONs
   Future<void> _loadData() async {
     if (_isLoaded) return;
