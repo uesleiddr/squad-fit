@@ -55,3 +55,8 @@ assets/data/food_vectors.json
 
 # Node modules in scripts
 scripts/node_modules/
+
+# Signing keys (NEVER commit these!)
+android/key.properties
+*.jks
+*.keystore
