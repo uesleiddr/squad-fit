@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/widgets/widgets.dart';
 import '../models/models.dart';
+import '../services/services.dart';
 import '../widgets/widgets.dart';
 
 /// Tela principal de nutrição com resumo diário
@@ -12,8 +14,12 @@ class NutritionScreen extends StatefulWidget {
 }
 
 class _NutritionScreenState extends State<NutritionScreen> {
+  final _nutritionService = getIt<NutritionService>();
+
   DateTime _selectedDate = DateTime.now();
+  DailySummary? _summary;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -22,120 +28,39 @@ class _NutritionScreenState extends State<NutritionScreen> {
   }
 
   Future<void> _loadData() async {
-    // Simula carregamento de dados do backend
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final summary = await _nutritionService.getDailySummary(_selectedDate);
+      if (mounted) {
+        setState(() {
+          _summary = summary;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
-  }
-
-  // Dados mockados para desenvolvimento
-  DailySummary get _mockSummary {
-    final now = DateTime.now();
-
-    final breakfastItems = [
-      MealItem(
-        id: '1',
-        mealEntryId: 'entry1',
-        name: 'Ovo frito',
-        quantity: 2,
-        unit: 'unidade',
-        calories: 180,
-        protein: 12,
-        carbs: 1,
-        fat: 14,
-        createdAt: now,
-      ),
-      MealItem(
-        id: '2',
-        mealEntryId: 'entry1',
-        name: 'Pão integral',
-        quantity: 1,
-        unit: 'fatia',
-        calories: 76,
-        protein: 3,
-        carbs: 14,
-        fat: 1,
-        createdAt: now,
-      ),
-    ];
-
-    final snackItems = [
-      MealItem(
-        id: '3',
-        mealEntryId: 'entry2',
-        name: 'Açaí 500ml',
-        quantity: 1,
-        unit: 'porção',
-        calories: 650,
-        protein: 4,
-        carbs: 80,
-        fat: 30,
-        createdAt: now,
-      ),
-      MealItem(
-        id: '4',
-        mealEntryId: 'entry2',
-        name: 'Banana',
-        quantity: 1,
-        unit: 'unidade',
-        calories: 50,
-        protein: 1,
-        carbs: 12,
-        fat: 0,
-        createdAt: now,
-      ),
-    ];
-
-    final meals = [
-      MealEntry(
-        id: 'entry1',
-        userId: 'user1',
-        mealType: MealType.breakfast,
-        description: '2 ovos fritos e pão integral',
-        totalCalories: 256,
-        totalProtein: 15,
-        totalCarbs: 15,
-        totalFat: 15,
-        items: breakfastItems,
-        recordedAt: _selectedDate,
-        createdAt: _selectedDate,
-      ),
-      MealEntry(
-        id: 'entry2',
-        userId: 'user1',
-        mealType: MealType.snack,
-        description: 'Açaí com banana',
-        totalCalories: 700,
-        totalProtein: 5,
-        totalCarbs: 92,
-        totalFat: 30,
-        items: snackItems,
-        recordedAt: _selectedDate,
-        createdAt: _selectedDate,
-      ),
-    ];
-
-    return DailySummary(
-      date: _selectedDate,
-      totalCalories: 956,
-      calorieGoal: 2000,
-      totalProtein: 20,
-      totalCarbs: 107,
-      totalFat: 45,
-      meals: meals,
-    );
   }
 
   void _onDateChanged(DateTime date) {
     setState(() {
       _selectedDate = date;
     });
+    _loadData();
   }
 
   void _onMealAdded(MealEntry? result) {
     if (result != null && mounted) {
-      // TODO: Salvar no banco e atualizar estado
+      _loadData();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Refeição adicionada: ${result.description}')),
       );
@@ -143,22 +68,91 @@ class _NutritionScreenState extends State<NutritionScreen> {
   }
 
   List<MealItem> _getItemsForMealType(MealType type) {
-    final entry = _mockSummary.meals.where((m) => m.mealType == type).toList();
-
+    if (_summary == null) return [];
+    final entry = _summary!.meals.where((m) => m.mealType == type).toList();
     if (entry.isEmpty) return [];
     return entry.first.items;
   }
 
   int _getCaloriesForMealType(MealType type) {
-    final entry = _mockSummary.meals.where((m) => m.mealType == type).toList();
-
+    if (_summary == null) return 0;
+    final entry = _summary!.meals.where((m) => m.mealType == type).toList();
     if (entry.isEmpty) return 0;
     return entry.first.totalCalories;
   }
 
+  MealEntry? _getMealEntryForType(MealType type) {
+    if (_summary == null) return null;
+    final entries = _summary!.meals.where((m) => m.mealType == type).toList();
+    if (entries.isEmpty) return null;
+    return entries.first;
+  }
+
+  Future<void> _deleteMealEntry(MealEntry entry) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir refeição?'),
+        content: Text('Deseja excluir "${entry.description}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _nutritionService.deleteMealEntry(entry.id);
+        _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Refeição excluída')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao excluir: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  void _showMealOptions(MealEntry entry) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Excluir refeição'),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteMealEntry(entry);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final summary = _mockSummary;
+    final summary = _summary ?? DailySummary(date: _selectedDate);
 
     return LoadingScaffold(
       isLoading: _isLoading,
@@ -175,7 +169,23 @@ class _NutritionScreenState extends State<NutritionScreen> {
       floatingActionButton: AddMealFab(
         onMealAdded: _onMealAdded,
       ),
-      body: SingleChildScrollView(
+      body: _error != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48),
+                  const SizedBox(height: 16),
+                  Text('Erro ao carregar dados'),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _loadData,
+                    child: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -212,7 +222,10 @@ class _NutritionScreenState extends State<NutritionScreen> {
                           items: _getItemsForMealType(type),
                           totalCalories: _getCaloriesForMealType(type),
                           onTap: () {
-                            // TODO: Expandir ou navegar para detalhes
+                            final entry = _getMealEntryForType(type);
+                            if (entry != null) {
+                              _showMealOptions(entry);
+                            }
                           },
                         ),
                         if (!isLast)

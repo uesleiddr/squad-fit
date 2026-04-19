@@ -285,8 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'https://www.google.com/favicon.ico',
                       height: 18,
                       width: 18,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.g_mobiledata),
+                      errorBuilder: (_, _, _) => const Icon(Icons.g_mobiledata),
                     ),
                     label: const Text('Continuar com Google'),
                     style: OutlinedButton.styleFrom(

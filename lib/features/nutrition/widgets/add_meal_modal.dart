@@ -1,8 +1,12 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/widgets/widgets.dart';
 import '../models/models.dart';
+import '../services/services.dart';
+import 'food_quantity_modal.dart';
+import 'food_search_field.dart';
 
 /// FAB com transição Container Transform para adicionar refeição
 class AddMealFab extends StatelessWidget {
@@ -48,20 +52,15 @@ class AddMealScreen extends StatefulWidget {
 }
 
 class _AddMealScreenState extends State<AddMealScreen> {
-  final _descriptionController = TextEditingController();
+  final _fatsecretService = getIt<FatSecretService>();
   MealType _selectedMealType = MealType.breakfast;
-  bool _isLoading = false;
+  final List<FoodWithQuantity> _selectedFoods = [];
+  bool _isSearchingOnline = false;
 
   @override
   void initState() {
     super.initState();
     _selectedMealType = _suggestMealType();
-  }
-
-  @override
-  void dispose() {
-    _descriptionController.dispose();
-    super.dispose();
   }
 
   MealType _suggestMealType() {
@@ -78,58 +77,115 @@ class _AddMealScreenState extends State<AddMealScreen> {
     }
   }
 
-  Future<void> _submitMeal() async {
-    final description = _descriptionController.text.trim();
-
-    if (description.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Descreva o que você comeu')),
-      );
-      return;
+  Future<void> _onFoodSelected(BrazilianFood food) async {
+    final result = await FoodQuantityModal.show(context, food);
+    if (result != null) {
+      setState(() => _selectedFoods.add(result));
     }
+  }
 
-    setState(() => _isLoading = true);
+  Future<void> _searchOnline(String query) async {
+    setState(() => _isSearchingOnline = true);
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      final results = await _fatsecretService.searchFoods(query);
+      if (!mounted) return;
 
-      final now = DateTime.now();
-      final mockEntry = MealEntry(
-        id: 'mock_${now.millisecondsSinceEpoch}',
-        userId: 'user1',
-        mealType: _selectedMealType,
-        description: description,
-        totalCalories: 300,
-        totalProtein: 15,
-        totalCarbs: 30,
-        totalFat: 10,
-        items: [
-          MealItem(
-            id: 'item_${now.millisecondsSinceEpoch}',
-            mealEntryId: 'mock_${now.millisecondsSinceEpoch}',
-            name: description,
-            quantity: 1,
-            calories: 300,
-            createdAt: now,
-          ),
-        ],
-        recordedAt: now,
-        createdAt: now,
+      if (results.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nenhum resultado encontrado online')),
+        );
+        setState(() => _isSearchingOnline = false);
+        return;
+      }
+
+      // Mostra dialog com resultados do FatSecret
+      final selected = await showDialog<FoodSearchResult>(
+        context: context,
+        builder: (context) => _OnlineSearchResultsDialog(results: results),
       );
 
-      widget.onClose(returnValue: mockEntry);
+      if (selected != null && mounted) {
+        // Busca dados nutricionais completos
+        final nutrition = await _fatsecretService.getFoodNutrition(selected.foodId);
+
+        if (nutrition != null && mounted) {
+          // Converte para BrazilianFood para usar o mesmo modal de quantidade
+          final food = BrazilianFood(
+            codigo: 'FS_${nutrition.foodId}',
+            name: nutrition.foodName,
+            calories: nutrition.calories.toDouble(),
+            protein: nutrition.protein,
+            carbs: nutrition.carbs,
+            fat: nutrition.fat,
+            source: 'fatsecret',
+          );
+          _onFoodSelected(food);
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao processar: $e')),
+          SnackBar(content: Text('Erro na busca online: $e')),
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isSearchingOnline = false);
       }
     }
   }
+
+  void _removeFood(int index) {
+    setState(() => _selectedFoods.removeAt(index));
+  }
+
+  void _submitMeal() {
+    if (_selectedFoods.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Adicione pelo menos um alimento')),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final totalCalories = _selectedFoods.fold<double>(0, (sum, f) => sum + f.calories);
+    final totalProtein = _selectedFoods.fold<double>(0, (sum, f) => sum + f.protein);
+    final totalCarbs = _selectedFoods.fold<double>(0, (sum, f) => sum + f.carbs);
+    final totalFat = _selectedFoods.fold<double>(0, (sum, f) => sum + f.fat);
+
+    final mealEntry = MealEntry(
+      id: 'meal_${now.millisecondsSinceEpoch}',
+      userId: '', // Será preenchido pelo serviço
+      mealType: _selectedMealType,
+      description: _selectedFoods.map((f) => f.name).join(', '),
+      totalCalories: totalCalories.round(),
+      totalProtein: totalProtein,
+      totalCarbs: totalCarbs,
+      totalFat: totalFat,
+      items: _selectedFoods.asMap().entries.map((entry) {
+        return MealItem(
+          id: 'item_${now.millisecondsSinceEpoch}_${entry.key}',
+          mealEntryId: 'meal_${now.millisecondsSinceEpoch}',
+          name: entry.value.name,
+          quantity: entry.value.quantity,
+          unit: entry.value.unit,
+          calories: entry.value.calories.round(),
+          protein: entry.value.protein,
+          carbs: entry.value.carbs,
+          fat: entry.value.fat,
+          createdAt: now,
+        );
+      }).toList(),
+      recordedAt: now,
+      createdAt: now,
+    );
+
+    widget.onClose(returnValue: mealEntry);
+  }
+
+  double get _totalCalories =>
+      _selectedFoods.fold<double>(0, (sum, f) => sum + f.calories);
 
   @override
   Widget build(BuildContext context) {
@@ -152,73 +208,197 @@ class _AddMealScreenState extends State<AddMealScreen> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Tipo de refeição
-            Text(
-              'Tipo de Refeição',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Tipo de refeição
+                  Text(
+                    'Tipo de Refeição',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.md),
+
+                  // Chips de seleção
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: MealType.values.map((type) {
+                      final isSelected = type == _selectedMealType;
+                      return ChoiceChip(
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(type.icon, size: 18),
+                            const SizedBox(width: 6),
+                            Text(type.label),
+                          ],
+                        ),
+                        selected: isSelected,
+                        onSelected: (_) {
+                          setState(() => _selectedMealType = type);
+                        },
+                        selectedColor: colorScheme.secondaryContainer,
+                        backgroundColor: colorScheme.surfaceContainerHigh,
+                      );
+                    }).toList(),
+                  ),
+                  SizedBox(height: AppSpacing.xl),
+
+                  // Campo de busca
+                  Text(
+                    'Buscar Alimento',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.md),
+
+                  if (_isSearchingOnline)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else
+                    FoodSearchField(
+                      onFoodSelected: _onFoodSelected,
+                      onSearchOnline: _searchOnline,
+                      hintText: 'Digite o nome do alimento...',
+                    ),
+
+                  SizedBox(height: AppSpacing.xl),
+
+                  // Lista de alimentos selecionados
+                  if (_selectedFoods.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Alimentos (${_selectedFoods.length})',
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${_totalCalories.toStringAsFixed(0)} kcal',
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: AppSpacing.md),
+
+                    ...List.generate(_selectedFoods.length, (index) {
+                      final food = _selectedFoods[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(
+                            food.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${food.quantity} ${food.unit} • ${food.calories.toStringAsFixed(0)} kcal',
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.remove_circle_outline),
+                            color: colorScheme.error,
+                            onPressed: () => _removeFood(index),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ],
               ),
             ),
-            SizedBox(height: AppSpacing.md),
+          ),
 
-            // Chips de seleção
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: MealType.values.map((type) {
-                final isSelected = type == _selectedMealType;
-                return ChoiceChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(type.icon, size: 18),
-                      const SizedBox(width: 6),
-                      Text(type.label),
-                    ],
+          // Botão de registrar (fixo no bottom)
+          if (_selectedFoods.isNotEmpty)
+            Container(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLowest,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
                   ),
-                  selected: isSelected,
-                  onSelected: (_) {
-                    setState(() => _selectedMealType = type);
-                  },
-                  selectedColor: colorScheme.secondaryContainer,
-                  backgroundColor: colorScheme.surfaceContainerHigh,
-                );
-              }).toList(),
-            ),
-            SizedBox(height: AppSpacing.xl),
-
-            // Campo de descrição
-            TextField(
-              controller: _descriptionController,
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: 'Descreva o que você comeu...\nEx: 2 ovos fritos com pão integral',
-                border: OutlineInputBorder(
-                  borderRadius: AppRadius.input,
+                ],
+              ),
+              child: SafeArea(
+                child: SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _submitMeal,
+                    child: Text(
+                      'Registrar Refeição (${_totalCalories.toStringAsFixed(0)} kcal)',
+                    ),
+                  ),
                 ),
               ),
             ),
-            SizedBox(height: AppSpacing.xl),
+        ],
+      ),
+    );
+  }
+}
 
-            // Botão de registrar
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitMeal,
-                child: _isLoading
-                    ? const ButtonLoadingIndicator()
-                    : const Text('Registrar Refeição'),
+/// Dialog para mostrar resultados da busca online (FatSecret)
+class _OnlineSearchResultsDialog extends StatelessWidget {
+  final List<FoodSearchResult> results;
+
+  const _OnlineSearchResultsDialog({required this.results});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      title: const Text('Resultados Online'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            final food = results[index];
+            return ListTile(
+              title: Text(food.foodName),
+              subtitle: Text(
+                food.foodDescription,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+              trailing: Icon(
+                Icons.add_circle_outline,
+                color: colorScheme.primary,
+              ),
+              onTap: () => Navigator.of(context).pop(food),
+            );
+          },
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+      ],
     );
   }
 }
