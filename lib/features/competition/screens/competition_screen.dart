@@ -8,6 +8,7 @@ import '../../../core/services/deep_link_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../home/widgets/ranking_list.dart';
 import '../widgets/create_competition_modal.dart';
 import '../widgets/edit_competition_modal.dart';
@@ -22,6 +23,13 @@ class CompetitionScreen extends StatefulWidget {
 
 class _CompetitionScreenState extends State<CompetitionScreen> {
   final _competitionService = getIt<CompetitionService>();
+  Key _streamKey = UniqueKey();
+
+  void _refreshStream() {
+    setState(() {
+      _streamKey = UniqueKey();
+    });
+  }
 
   Future<void> _showDeleteConfirmation(
     BuildContext context,
@@ -193,6 +201,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<CompetitionModel>>(
+      key: _streamKey,
       stream: _competitionService.getMyCompetitionsStream(),
       builder: (context, snapshot) {
         final competitions = snapshot.data ?? [];
@@ -248,12 +257,57 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
     CompetitionModel? currentCompetition,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingIndicator();
     }
 
     if (snapshot.hasError) {
+      final errorMessage = snapshot.error.toString();
+      final isTokenExpired = errorMessage.contains('InvalidJWTToken') ||
+          errorMessage.contains('Token has expired');
+
       return Center(
-        child: Text('Erro ao carregar: ${snapshot.error}'),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isTokenExpired ? Icons.lock_clock : Icons.error_outline,
+                size: 64,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isTokenExpired
+                    ? 'Sua sessão expirou'
+                    : 'Erro ao carregar desafios',
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isTokenExpired
+                    ? 'Por favor, faça login novamente para continuar.'
+                    : 'Tente novamente mais tarde.',
+                style: TextStyle(color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              if (isTokenExpired) ...[
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/',
+                      (route) => false,
+                    );
+                  },
+                  icon: const Icon(Icons.login),
+                  label: const Text('Fazer Login'),
+                ),
+              ],
+            ],
+          ),
+        ),
       );
     }
 
@@ -273,12 +327,17 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
     final competition = await CreateCompetitionModal.show(context);
 
     if (competition != null && context.mounted) {
+      _refreshStream();
       SnackBarHelper.showSuccess(context, 'Desafio criado com sucesso!');
     }
   }
 
   Future<void> _showJoinModal(BuildContext context) async {
-    await JoinCompetitionModal.show(context);
+    final joined = await JoinCompetitionModal.show(context);
+
+    if (joined == true && mounted) {
+      _refreshStream();
+    }
   }
 }
 
@@ -428,15 +487,20 @@ class _CompetitionDetails extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header com nome do desafio
+            // Card principal: nome + informações do desafio
             Card(
               elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              color: colorScheme.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header com nome do desafio
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
                       children: [
                         CircleAvatar(
                           radius: 24,
@@ -472,8 +536,8 @@ class _CompetitionDetails extends StatelessWidget {
                                       .textTheme
                                       .bodyMedium
                                       ?.copyWith(
-                                        color: colorScheme.onPrimaryContainer
-                                            .withValues(alpha: 0.7),
+                                        color: colorScheme.onSurface
+                                            .withValues(alpha: 0.6),
                                       ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
@@ -481,59 +545,46 @@ class _CompetitionDetails extends StatelessWidget {
                             ],
                           ),
                         ),
+                        // Badge de status
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: hasEnded
+                                ? Colors.grey.withValues(alpha: 0.2)
+                                : colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            hasEnded
+                                ? 'Encerrado'
+                                : daysRemaining > 0
+                                    ? '$daysRemaining dias'
+                                    : 'Hoje!',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: hasEnded ? Colors.grey : colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: hasEnded
-                            ? Colors.grey.withValues(alpha: 0.2)
-                            : colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        hasEnded
-                            ? 'Encerrado'
-                            : daysRemaining > 0
-                                ? '$daysRemaining dias restantes'
-                                : 'Encerra hoje!',
-                        style: TextStyle(
-                          color: hasEnded ? Colors.grey : colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: context.cardSpacing),
+                  ),
 
-            // Informações do desafio
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Informações',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+                  Divider(height: 1, color: colorScheme.outlineVariant),
+
+                  // Informação: Data de término
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
                       children: [
                         Icon(
                           Icons.calendar_today,
                           size: 20,
-                          color: colorScheme.primary,
+                          color: colorScheme.primary.withValues(alpha: 0.7),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -546,8 +597,8 @@ class _CompetitionDetails extends StatelessWidget {
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
-                                      color: colorScheme.onPrimaryContainer
-                                          .withValues(alpha: 0.7),
+                                      color: colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
                                     ),
                               ),
                               Text(
@@ -561,15 +612,19 @@ class _CompetitionDetails extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    const SizedBox(height: 12),
-                    Row(
+                  ),
+
+                  Divider(height: 1, color: colorScheme.outlineVariant),
+
+                  // Informação: Regra de vitória
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
                       children: [
                         Icon(
                           Icons.emoji_events_outlined,
                           size: 20,
-                          color: colorScheme.primary,
+                          color: colorScheme.primary.withValues(alpha: 0.7),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -582,8 +637,8 @@ class _CompetitionDetails extends StatelessWidget {
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
-                                      color: colorScheme.onPrimaryContainer
-                                          .withValues(alpha: 0.7),
+                                      color: colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
                                     ),
                               ),
                               Text(
@@ -597,8 +652,8 @@ class _CompetitionDetails extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: context.cardSpacing),
@@ -606,65 +661,79 @@ class _CompetitionDetails extends StatelessWidget {
             // Código de convite
             Card(
               elevation: 2,
+              color: colorScheme.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
-                  children: [
-                    Text(
-                      'Convidar Participantes',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Código de Convite',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer
-                                .withValues(alpha: 0.7),
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        competition.inviteCode,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 4,
-                          color: colorScheme.primary,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.group_add_outlined,
+                        size: 20,
+                        color: colorScheme.primary.withValues(alpha: 0.7),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Convidar Participantes',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Código de Convite',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      competition.inviteCode,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                        color: colorScheme.primary,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _copyCode(context),
-                            icon: const Icon(Icons.copy, size: 18),
-                            label: const Text('Copiar'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _copyCode(context),
+                          icon: const Icon(Icons.copy, size: 18),
+                          label: const Text('Copiar'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _shareWhatsApp(context),
-                            icon: const Icon(Icons.share, size: 18),
-                            label: const Text('WhatsApp'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF25D366),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _shareWhatsApp(context),
+                          icon: const Icon(Icons.share, size: 18),
+                          label: const Text('WhatsApp'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                   ],
                 ),
               ),
