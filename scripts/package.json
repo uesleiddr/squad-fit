@@ -1,0 +1,13 @@
+{
+  "name": "squad-fit-scripts",
+  "version": "1.0.0",
+  "description": "Scripts para migração de dados do SquadFit",
+  "type": "module",
+  "scripts": {
+    "migrate-vectors": "node migrate_vectors.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.4.5"
+  }
+}
