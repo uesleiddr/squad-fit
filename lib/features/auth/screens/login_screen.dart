@@ -58,8 +58,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = _getErrorMessage(e.message);
       });
     } catch (e) {
+      debugPrint('Auth Error: $e');
       setState(() {
-        _errorMessage = 'Ocorreu um erro. Tente novamente.';
+        _errorMessage = 'Erro: ${e.toString()}';
       });
     } finally {
       if (mounted) {
