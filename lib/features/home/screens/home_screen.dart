@@ -15,8 +15,36 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _competitionService = getIt<CompetitionService>();
+  Key _streamKey = UniqueKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshStream();
+    }
+  }
+
+  void _refreshStream() {
+    if (mounted) {
+      setState(() {
+        _streamKey = UniqueKey();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,12 +59,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
       ),
-      drawer: const AppDrawer(),
+      drawer: AppDrawer(onNavigationReturn: _refreshStream),
       drawerEdgeDragWidth: 60,
       body: SafeArea(
         child: ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
           child: StreamBuilder<List<CompetitionModel>>(
+            key: _streamKey,
             stream: _competitionService.getMyCompetitionsStream(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -46,18 +75,25 @@ class _HomeScreenState extends State<HomeScreen> {
               final competitions = snapshot.data ?? [];
               final currentCompetition = _competitionService
                   .getCurrentCompetition(competitions);
+              final activeCompetition = competitions
+                  .where((c) => !c.hasEnded)
+                  .toList()
+                  .firstOrNull;
 
-              return SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                padding: context.screenPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const UserStatsCard(),
-                    SizedBox(height: context.cardSpacing),
-                    RankingList(competition: currentCompetition),
-                    const SizedBox(height: 80),
-                  ],
+              return RefreshIndicator(
+                onRefresh: () async => _refreshStream(),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: context.screenPadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      UserStatsCard(activeCompetition: activeCompetition),
+                      SizedBox(height: context.cardSpacing),
+                      RankingList(competition: currentCompetition),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
               );
             },

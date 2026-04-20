@@ -77,4 +77,14 @@ class AuthService {
   Future<void> resetPassword(String email) async {
     await _supabase.auth.resetPasswordForEmail(email);
   }
+
+  // Deletar conta do usuário
+  Future<void> deleteAccount() async {
+    // Faz logout do Google
+    final googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
+
+    // Deleta o usuário do Supabase Auth via RPC
+    await _supabase.rpc('delete_user_account');
+  }
 }

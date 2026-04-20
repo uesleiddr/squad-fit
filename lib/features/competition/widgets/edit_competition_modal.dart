@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
+import '../../../core/theme/design_system.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/widgets/widgets.dart';
@@ -17,9 +18,7 @@ class EditCompetitionModal extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) => EditCompetitionModal(competition: competition),
     );
   }
@@ -103,7 +102,11 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: AppRadius.modal,
+      ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
@@ -196,7 +199,7 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
               Text(
                 'A regra de vitória não pode ser alterada.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey,
+                      color: colorScheme.onSurfaceVariant,
                     ),
               ),
               const SizedBox(height: 24),
@@ -209,9 +212,6 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
                       onPressed: _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
                       ),
                       child: const Text('Cancelar'),
                     ),
@@ -222,11 +222,6 @@ class _EditCompetitionModalState extends State<EditCompetitionModal> {
                       onPressed: _isLoading ? null : _saveChanges,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
                       ),
                       child: _isLoading
                           ? const ButtonLoadingIndicator()

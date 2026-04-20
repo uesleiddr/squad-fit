@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
+import '../../../core/theme/design_system.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/widgets/widgets.dart';
@@ -110,10 +111,12 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: AppRadius.modal,
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -132,7 +135,7 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: colorScheme.outline.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -199,25 +202,25 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
               const SizedBox(height: 8),
               InkWell(
                 onTap: _selectEndDate,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: _endDate == null
-                          ? Colors.grey.shade300
-                          : Theme.of(context).primaryColor,
+                          ? colorScheme.outline.withValues(alpha: 0.3)
+                          : colorScheme.primary,
                       width: _endDate == null ? 1 : 2,
                     ),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.calendar_today,
                         color: _endDate == null
-                            ? Colors.grey
-                            : Theme.of(context).primaryColor,
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.primary,
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -230,14 +233,15 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
                             fontWeight: _endDate == null
                                 ? FontWeight.normal
                                 : FontWeight.w500,
-                            color:
-                                _endDate == null ? Colors.grey.shade600 : null,
+                            color: _endDate == null
+                                ? colorScheme.onSurfaceVariant
+                                : null,
                           ),
                         ),
                       ),
                       Icon(
                         Icons.chevron_right,
-                        color: Colors.grey.shade400,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ],
                   ),
@@ -275,13 +279,6 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
                 height: 56,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _createCompetition,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
                   child: _isLoading
                       ? const ButtonLoadingIndicator()
                       : const Text(
@@ -306,22 +303,23 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
     required IconData icon,
   }) {
     final isSelected = _selectedRule == rule;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: () => setState(() => _selectedRule = rule),
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(
             color: isSelected
-                ? Theme.of(context).primaryColor
-                : Colors.grey.shade300,
+                ? colorScheme.primary
+                : colorScheme.outline.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(12),
           color: isSelected
-              ? Theme.of(context).primaryColor.withValues(alpha: 0.05)
+              ? colorScheme.primary.withValues(alpha: 0.1)
               : null,
         ),
         child: Row(
@@ -329,8 +327,8 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
             Icon(
               icon,
               color: isSelected
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey.shade600,
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -342,7 +340,7 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: isSelected
-                          ? Theme.of(context).primaryColor
+                          ? colorScheme.primary
                           : null,
                     ),
                   ),
@@ -350,7 +348,7 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
                     description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -359,8 +357,8 @@ class _CreateCompetitionModalState extends State<CreateCompetitionModal> {
             Icon(
               isSelected ? Icons.check_circle : Icons.circle_outlined,
               color: isSelected
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey.shade400,
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
             ),
           ],
         ),

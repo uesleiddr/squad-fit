@@ -7,11 +7,13 @@ import '../../../core/theme/design_system.dart';
 class CircularCalorieProgress extends StatelessWidget {
   final int consumed;
   final int goal;
+  final VoidCallback? onEditGoal;
 
   const CircularCalorieProgress({
     super.key,
     required this.consumed,
     required this.goal,
+    this.onEditGoal,
   });
 
   int get remaining => goal - consumed;
@@ -79,6 +81,7 @@ class CircularCalorieProgress extends StatelessWidget {
                 label: 'Meta',
                 value: '$goal',
                 unit: 'kcal',
+                onTap: onEditGoal,
               ),
               Container(
                 height: 40,
@@ -140,12 +143,26 @@ class CircularCalorieProgress extends StatelessWidget {
     required String value,
     required String unit,
     bool highlight = false,
+    VoidCallback? onTap,
   }) {
-    return Column(
+    final content = Column(
       children: [
-        Text(
-          label,
-          style: AppTypography.caption(context),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AppTypography.caption(context),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.edit,
+                size: 12,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 4),
         Row(
@@ -168,5 +185,18 @@ class CircularCalorieProgress extends StatelessWidget {
         ),
       ],
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: content,
+        ),
+      );
+    }
+
+    return content;
   }
 }

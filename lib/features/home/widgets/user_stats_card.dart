@@ -6,24 +6,23 @@ import '../../../core/models/competition_model.dart';
 import '../../../core/models/weight_record_model.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/weight_service.dart';
-import '../../../core/services/competition_service.dart';
 import '../../../core/widgets/widgets.dart';
 
 /// Dados combinados para o UserStatsCard
 class _UserStatsData {
   final UserModel? user;
   final WeightRecordModel? latestWeight;
-  final CompetitionModel? activeCompetition;
 
   _UserStatsData({
     this.user,
     this.latestWeight,
-    this.activeCompetition,
   });
 }
 
 class UserStatsCard extends StatefulWidget {
-  const UserStatsCard({super.key});
+  final CompetitionModel? activeCompetition;
+
+  const UserStatsCard({super.key, this.activeCompetition});
 
   @override
   State<UserStatsCard> createState() => _UserStatsCardState();
@@ -32,40 +31,30 @@ class UserStatsCard extends StatefulWidget {
 class _UserStatsCardState extends State<UserStatsCard> {
   final _userService = getIt<UserService>();
   final _weightService = getIt<WeightService>();
-  final _competitionService = getIt<CompetitionService>();
-
-  late final Stream<_UserStatsData> _combinedStream;
-
-  @override
-  void initState() {
-    super.initState();
-    _combinedStream = _createCombinedStream();
-  }
 
   Stream<_UserStatsData> _createCombinedStream() {
-    final userStream = _userService.getCurrentUserStream();
+    final userStream = _userService
+        .getCurrentUserStream()
+        .handleError((e) => null);
 
     final weightStream = _weightService
         .getWeightHistoryStream()
-        .map((records) => records.isNotEmpty ? records.first : null);
+        .map((records) => records.isNotEmpty ? records.first : null)
+        .handleError((e) => null);
 
-    final competitionStream = _competitionService
-        .getMyCompetitionsStream()
-        .map((competitions) =>
-            competitions.where((c) => !c.hasEnded).toList().firstOrNull);
-
-    return Rx.combineLatest3(
+    return Rx.combineLatest2(
       userStream,
       weightStream,
-      competitionStream,
-      (UserModel? user, WeightRecordModel? weight, CompetitionModel? competition) {
+      (UserModel? user, WeightRecordModel? weight) {
         return _UserStatsData(
           user: user,
           latestWeight: weight,
-          activeCompetition: competition,
         );
       },
-    );
+    ).handleError((e) {
+      // Retorna dados vazios em caso de erro
+      return _UserStatsData();
+    });
   }
 
   @override
@@ -73,7 +62,7 @@ class _UserStatsCardState extends State<UserStatsCard> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return StreamBuilder<_UserStatsData>(
-      stream: _combinedStream,
+      stream: _createCombinedStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Card(
@@ -96,7 +85,7 @@ class _UserStatsCardState extends State<UserStatsCard> {
           colorScheme,
           data?.user,
           data?.latestWeight,
-          data?.activeCompetition,
+          widget.activeCompetition,
         );
       },
     );
@@ -220,7 +209,9 @@ class _UserStatsCardState extends State<UserStatsCard> {
                     icon: weightLost != null && weightLost >= 0
                         ? Icons.trending_down
                         : Icons.trending_up,
-                    label: 'Perdido',
+                    label: weightLost != null && weightLost >= 0
+                        ? 'Perdido'
+                        : 'Ganho',
                     value: weightLost != null
                         ? '${weightLost >= 0 ? '-' : '+'}${weightLost.abs().toStringAsFixed(1)} kg'
                         : '-- kg',

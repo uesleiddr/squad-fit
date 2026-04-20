@@ -134,4 +134,25 @@ class UserService {
 
     return results;
   }
+
+  /// Atualiza a meta de calorias do usuário
+  Future<void> updateCalorieGoal(int calorieGoal) async {
+    if (_userId == null) {
+      throw Exception('Usuário não autenticado');
+    }
+
+    await _supabase
+        .from('users')
+        .update({'calorie_goal': calorieGoal})
+        .eq('id', _userId!);
+  }
+
+  /// Deleta o perfil do usuário (dados na tabela users)
+  Future<void> deleteUserProfile() async {
+    if (_userId == null) {
+      throw Exception('Usuário não autenticado');
+    }
+
+    await _supabase.from('users').delete().eq('id', _userId!);
+  }
 }

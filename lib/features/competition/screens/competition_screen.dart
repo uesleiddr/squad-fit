@@ -99,6 +99,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
       try {
         await _competitionService.deleteCompetition(competition.id);
         if (context.mounted) {
+          _refreshStream();
           SnackBarHelper.showSuccess(context, 'Desafio excluído com sucesso');
         }
       } catch (e) {
@@ -177,6 +178,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
       try {
         await _competitionService.leaveCompetition(competition.id);
         if (context.mounted) {
+          _refreshStream();
           SnackBarHelper.showSuccess(context, 'Você saiu do desafio');
         }
       } catch (e) {
@@ -320,6 +322,7 @@ class _CompetitionScreenState extends State<CompetitionScreen> {
 
     return _CompetitionDetails(
       competition: currentCompetition,
+      onRefresh: () async => _refreshStream(),
     );
   }
 
@@ -436,8 +439,12 @@ class _EmptyState extends StatelessWidget {
 // Detalhes da competição ativa
 class _CompetitionDetails extends StatelessWidget {
   final CompetitionModel competition;
+  final Future<void> Function() onRefresh;
 
-  const _CompetitionDetails({required this.competition});
+  const _CompetitionDetails({
+    required this.competition,
+    required this.onRefresh,
+  });
 
   String _getVictoryRuleText(VictoryRule rule) {
     switch (rule) {
@@ -482,13 +489,16 @@ class _CompetitionDetails extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: context.screenPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Card principal: nome + informações do desafio
-            Card(
+      child: RefreshIndicator(
+        onRefresh: onRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: context.screenPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Card principal: nome + informações do desafio
+              Card(
               elevation: 2,
               color: colorScheme.surfaceContainerLowest,
               shape: RoundedRectangleBorder(
@@ -743,6 +753,7 @@ class _CompetitionDetails extends StatelessWidget {
             // Ranking dos participantes
             RankingList(competition: competition),
           ],
+        ),
         ),
       ),
     );

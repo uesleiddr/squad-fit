@@ -22,11 +22,18 @@ class _WeightScreenState extends State<WeightScreen> {
 
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+  Key _streamKey = UniqueKey();
 
   @override
   void dispose() {
     _weightController.dispose();
     super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _streamKey = UniqueKey();
+    });
   }
 
   Future<void> _selectDate() async {
@@ -124,19 +131,23 @@ class _WeightScreenState extends State<WeightScreen> {
         title: const Text('Peso'),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: context.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Formulário de registro
-              _buildRegistrationForm(colorScheme),
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: context.screenPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Formulário de registro
+                _buildRegistrationForm(colorScheme),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Histórico
-              _buildHistorySection(colorScheme),
-            ],
+                // Histórico
+                _buildHistorySection(colorScheme),
+              ],
+            ),
           ),
         ),
       ),
@@ -302,6 +313,7 @@ class _WeightScreenState extends State<WeightScreen> {
           ),
         ),
         StreamBuilder<List<WeightRecordModel>>(
+          key: _streamKey,
           stream: _weightService.getWeightHistoryStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {

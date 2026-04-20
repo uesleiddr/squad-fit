@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../settings/widgets/edit_calorie_goal_modal.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 import '../widgets/widgets.dart';
@@ -188,6 +189,14 @@ class _NutritionScreenState extends State<NutritionScreen> {
     );
   }
 
+  Future<void> _openEditCalorieGoal() async {
+    final currentGoal = _summary?.calorieGoal ?? 2000;
+    final updated = await EditCalorieGoalModal.show(context, currentGoal);
+    if (updated == true) {
+      _loadData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = _summary ?? DailySummary(date: _selectedDate);
@@ -220,68 +229,74 @@ class _NutritionScreenState extends State<NutritionScreen> {
                 ],
               ),
             )
-          : SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Progresso circular de calorias
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: CircularCalorieProgress(
-                consumed: summary.totalCalories,
-                goal: summary.calorieGoal,
-              ),
-            ),
-
-            // Card com todas as refeições
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
-                  children: MealType.values.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final type = entry.value;
-                    final isLast = index == MealType.values.length - 1;
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Progresso circular de calorias
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: CircularCalorieProgress(
+                        consumed: summary.totalCalories,
+                        goal: summary.calorieGoal,
+                        onEditGoal: _openEditCalorieGoal,
+                      ),
+                    ),
 
-                    return Column(
-                      children: [
-                        MealSection(
-                          mealType: type,
-                          items: _getItemsForMealType(type),
-                          totalCalories: _getCaloriesForMealType(type),
-                          onAddMeal: () => _openAddMealScreen(type),
-                          onTap: () {
-                            final entries = _getMealEntriesForType(type);
-                            if (entries.length == 1) {
-                              _showMealOptions(entries.first);
-                            } else if (entries.length > 1) {
-                              _showMealSelectionDialog(entries);
-                            }
-                          },
-                        ),
-                        if (!isLast)
-                          Divider(
-                            height: 1,
-                            thickness: 1,
+                    // Card com todas as refeições
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                          border: Border.all(
                             color: Theme.of(context).colorScheme.outlineVariant,
                           ),
-                      ],
-                    );
-                  }).toList(),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: MealType.values.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final type = entry.value;
+                            final isLast = index == MealType.values.length - 1;
+
+                            return Column(
+                              children: [
+                                MealSection(
+                                  mealType: type,
+                                  items: _getItemsForMealType(type),
+                                  totalCalories: _getCaloriesForMealType(type),
+                                  onAddMeal: () => _openAddMealScreen(type),
+                                  onTap: () {
+                                    final entries = _getMealEntriesForType(type);
+                                    if (entries.length == 1) {
+                                      _showMealOptions(entries.first);
+                                    } else if (entries.length > 1) {
+                                      _showMealSelectionDialog(entries);
+                                    }
+                                  },
+                                ),
+                                if (!isLast)
+                                  Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: Theme.of(context).colorScheme.outlineVariant,
+                                  ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    // Espaçamento extra para evitar que o conteúdo fique atrás dos botões de navegação
+                    const SizedBox(height: 80),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
     );
   }
 }

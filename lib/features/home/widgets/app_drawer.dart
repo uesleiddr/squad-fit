@@ -4,21 +4,26 @@ import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
 import '../../competition/screens/competition_screen.dart';
 import '../../nutrition/screens/screens.dart';
+import '../../settings/screens/settings_screen.dart';
 import '../../weight/screens/weight_screen.dart';
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
+  final VoidCallback? onNavigationReturn;
+
+  const AppDrawer({super.key, this.onNavigationReturn});
 
   void _handleTap(BuildContext context) {
     Navigator.pop(context);
   }
 
-  /// Navega para uma tela fechando o drawer
+  /// Navega para uma tela fechando o drawer e chama callback ao voltar
   void _navigateTo(BuildContext context, Widget screen) {
     Navigator.pop(context);
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => screen),
-    );
+    ).then((_) {
+      onNavigationReturn?.call();
+    });
   }
 
   Future<void> _handleSignOut() async {
@@ -118,7 +123,7 @@ class AppDrawer extends StatelessWidget {
               icon: Icons.settings_outlined,
               selectedIcon: Icons.settings,
               title: 'Configurações',
-              onTap: () => _handleTap(context),
+              onTap: () => _navigateTo(context, const SettingsScreen()),
             ),
             _DrawerItem(
               icon: Icons.logout_outlined,

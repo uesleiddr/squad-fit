@@ -48,10 +48,20 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text,
         );
       } else {
-        await _authService.signUpWithEmail(
+        final response = await _authService.signUpWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
         );
+        // Se o cadastro foi bem-sucedido mas precisa confirmar email
+        if (response.user != null && response.user!.emailConfirmedAt == null) {
+          if (mounted) {
+            SnackBarHelper.showSuccess(
+              context,
+              'Conta criada! Verifique seu email para confirmar o cadastro.',
+            );
+          }
+          return;
+        }
       }
     } on AuthException catch (e) {
       setState(() {

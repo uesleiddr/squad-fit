@@ -3,6 +3,7 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/services/user_service.dart';
+import '../../../core/theme/design_system.dart';
 import '../../../core/utils/invite_code_validator.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/widgets/widgets.dart';
@@ -77,10 +78,12 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: AppRadius.modal,
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -97,7 +100,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: colorScheme.outline.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -115,7 +118,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
             const SizedBox(height: 8),
             Text(
               'Digite o código de convite que você recebeu',
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -128,7 +131,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
                 hintText: 'Ex: ABC12345',
                 prefixIcon: const Icon(Icons.vpn_key_outlined),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               textCapitalization: TextCapitalization.characters,
@@ -146,13 +149,6 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
               height: 56,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _joinCompetition,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
                 child: _isLoading
                     ? const ButtonLoadingIndicator()
                     : const Text(
