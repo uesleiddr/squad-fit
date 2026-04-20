@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SquadFit - Seu app de fitness em equipe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+        }
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #E94560, #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .tagline {
+            font-size: 1.5rem;
+            color: #ccc;
+            margin-bottom: 2rem;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .feature {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .feature-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .feature-desc {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        .links {
+            margin-top: 2rem;
+        }
+        .links a {
+            color: #E94560;
+            text-decoration: none;
+            margin: 0 1rem;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+        .download-badge {
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            background: #E94560;
+            border-radius: 8px;
+            display: inline-block;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="logo">SquadFit</h1>
+        <p class="tagline">Seu app de fitness em equipe</p>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🏆</div>
+                <div class="feature-title">Desafios</div>
+                <div class="feature-desc">Compita com amigos em desafios de perda de peso</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🍎</div>
+                <div class="feature-title">Nutrição</div>
+                <div class="feature-desc">Registre suas refeições com busca inteligente</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚖️</div>
+                <div class="feature-title">Peso</div>
+                <div class="feature-desc">Acompanhe sua evolução ao longo do tempo</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">👥</div>
+                <div class="feature-title">Equipe</div>
+                <div class="feature-desc">Motive-se com seu squad de amigos</div>
+            </div>
+        </div>
+
+        <div class="download-badge">
+            Em breve na Play Store
+        </div>
+
+        <div class="links">
+            <a href="privacy-policy.html">Política de Privacidade</a>
+        </div>
+    </div>
+</body>
+</html>
