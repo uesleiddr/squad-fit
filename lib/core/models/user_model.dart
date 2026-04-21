@@ -10,6 +10,7 @@ class UserModel extends Equatable {
   final double? goalWeight;
   final int? height; // em cm
   final DateTime? birthDate;
+  final int calorieGoal; // meta diária de calorias
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -23,6 +24,7 @@ class UserModel extends Equatable {
     this.goalWeight,
     this.height,
     this.birthDate,
+    this.calorieGoal = 2000,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -55,6 +57,7 @@ class UserModel extends Equatable {
       birthDate: json['birth_date'] != null
           ? DateTime.parse(json['birth_date'])
           : null,
+      calorieGoal: json['calorie_goal'] ?? 2000,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : now,
@@ -75,6 +78,7 @@ class UserModel extends Equatable {
       'goal_weight': goalWeight,
       'height': height,
       'birth_date': birthDate?.toIso8601String().split('T')[0],
+      'calorie_goal': calorieGoal,
     };
   }
 
@@ -88,6 +92,7 @@ class UserModel extends Equatable {
     double? goalWeight,
     int? height,
     DateTime? birthDate,
+    int? calorieGoal,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -101,6 +106,7 @@ class UserModel extends Equatable {
       goalWeight: goalWeight ?? this.goalWeight,
       height: height ?? this.height,
       birthDate: birthDate ?? this.birthDate,
+      calorieGoal: calorieGoal ?? this.calorieGoal,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -117,6 +123,7 @@ class UserModel extends Equatable {
         goalWeight,
         height,
         birthDate,
+        calorieGoal,
         createdAt,
         updatedAt,
       ];

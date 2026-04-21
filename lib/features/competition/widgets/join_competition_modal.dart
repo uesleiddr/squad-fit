@@ -5,6 +5,7 @@ import '../../../core/services/weight_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/utils/invite_code_validator.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/widgets/widgets.dart';
 
 class JoinCompetitionModal extends StatefulWidget {
   const JoinCompetitionModal({super.key});
@@ -153,15 +154,7 @@ class _JoinCompetitionModalState extends State<JoinCompetitionModal> {
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
+                    ? const ButtonLoadingIndicator()
                     : const Text(
                         'Entrar no Desafio',
                         style: TextStyle(fontSize: 16),
