@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Tipografia padronizada do Squad Fit
 ///
@@ -7,13 +8,23 @@ import 'package:flutter/material.dart';
 /// Text('1044', style: AppTypography.statNumber(context))
 /// Text('kcal restantes', style: AppTypography.unit(context))
 /// ```
+///
+/// Fontes utilizadas:
+/// - Inter: corpo de texto, labels, buttons
+/// - Space Grotesk: displays, números de destaque, títulos principais
 abstract class AppTypography {
   // ============================================
-  // FONTE BASE
+  // FONTES (via Google Fonts)
   // ============================================
 
-  /// Fonte principal para todo o app (Inter)
-  static const String fontFamily = 'Inter';
+  /// Fonte principal para corpo de texto (Inter)
+  static String get fontFamily => GoogleFonts.inter().fontFamily!;
+
+  /// Fonte para displays e números de destaque (Space Grotesk)
+  static String get fontDisplay => GoogleFonts.spaceGrotesk().fontFamily!;
+
+  /// Fonte para números tabulares (Space Grotesk)
+  static String get fontNumeric => GoogleFonts.spaceGrotesk().fontFamily!;
 
   // ============================================
   // TAMANHOS (Scale)
@@ -29,6 +40,7 @@ abstract class AppTypography {
   static const double size4xl = 36;
   static const double size5xl = 48;
   static const double size6xl = 60;
+  static const double size7xl = 84; // Para números hero gigantes
 
   // ============================================
   // PESOS
@@ -39,18 +51,71 @@ abstract class AppTypography {
   static const FontWeight weightSemibold = FontWeight.w600;
   static const FontWeight weightBold = FontWeight.w700;
   static const FontWeight weightExtrabold = FontWeight.w800;
+  static const FontWeight weightBlack = FontWeight.w900;
 
   // ============================================
-  // ESTILOS ESPECIAIS (Números/Stats)
+  // DISPLAY STYLES (Space Grotesk)
   // ============================================
+
+  /// Display XL - hero screens, onboarding, victory
+  static TextStyle displayXl(BuildContext context, {Color? color}) {
+    return TextStyle(
+      fontFamily: fontDisplay,
+      fontSize: 72,
+      fontWeight: weightBlack,
+      letterSpacing: -2.5,
+      height: 0.92,
+      color: color ?? Colors.white,
+    );
+  }
+
+  /// Display LG - títulos principais
+  static TextStyle displayLg(BuildContext context, {Color? color}) {
+    return TextStyle(
+      fontFamily: fontDisplay,
+      fontSize: size6xl,
+      fontWeight: weightBold,
+      letterSpacing: -1.8,
+      height: 0.95,
+      color: color ?? Colors.white,
+    );
+  }
+
+  /// Display MD - subtítulos importantes
+  static TextStyle displayMd(BuildContext context, {Color? color}) {
+    return TextStyle(
+      fontFamily: fontDisplay,
+      fontSize: size5xl,
+      fontWeight: weightBold,
+      letterSpacing: -1.2,
+      height: 1.0,
+      color: color ?? Colors.white,
+    );
+  }
+
+  // ============================================
+  // ESTILOS ESPECIAIS (Números/Stats) - Space Grotesk
+  // ============================================
+
+  /// Stat XL - números hero (84px)
+  static TextStyle statXl(BuildContext context, {Color? color}) {
+    return TextStyle(
+      fontFamily: fontNumeric,
+      fontSize: 84,
+      fontWeight: weightBlack,
+      letterSpacing: -3,
+      height: 0.9,
+      color: color ?? Colors.white,
+    );
+  }
 
   /// Número grande de destaque (ex: 1044 kcal)
   /// Cor padrão: branco (como na referência Sandow)
   static TextStyle statNumber(BuildContext context, {Color? color}) {
     return TextStyle(
-      fontFamily: fontFamily,
+      fontFamily: fontNumeric,
       fontSize: size5xl,
-      fontWeight: weightExtrabold,
+      fontWeight: weightBlack,
       letterSpacing: -2,
       height: 1.0,
       color: color ?? Colors.white,
@@ -60,11 +125,11 @@ abstract class AppTypography {
   /// Número médio (ex: 256 kcal em cards menores)
   static TextStyle statNumberMedium(BuildContext context, {Color? color}) {
     return TextStyle(
-      fontFamily: fontFamily,
+      fontFamily: fontNumeric,
       fontSize: size3xl,
       fontWeight: weightBold,
       letterSpacing: -1,
-      height: 1.1,
+      height: 1.05,
       color: color ?? Theme.of(context).colorScheme.onSurface,
     );
   }
@@ -72,7 +137,7 @@ abstract class AppTypography {
   /// Número pequeno (ex: 180 em lista de itens)
   static TextStyle statNumberSmall(BuildContext context, {Color? color}) {
     return TextStyle(
-      fontFamily: fontFamily,
+      fontFamily: fontNumeric,
       fontSize: sizeXl,
       fontWeight: weightSemibold,
       letterSpacing: -0.5,
@@ -85,13 +150,14 @@ abstract class AppTypography {
   // TÍTULOS
   // ============================================
 
-  /// Título de página/seção principal
+  /// Título de página/seção principal (Space Grotesk)
   static TextStyle pageTitle(BuildContext context, {Color? color}) {
     return TextStyle(
-      fontFamily: fontFamily,
+      fontFamily: fontDisplay,
       fontSize: size2xl,
       fontWeight: weightBold,
       letterSpacing: -0.5,
+      height: 1.15,
       color: color ?? Theme.of(context).colorScheme.onSurface,
     );
   }

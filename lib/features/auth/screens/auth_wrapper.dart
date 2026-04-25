@@ -3,9 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../home/screens/home_screen.dart';
+import '../../home/screens/home_screen_v2.dart';
 import '../../profile/screens/profile_setup_screen.dart';
-import 'login_screen.dart';
+import 'login_screen_v2.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -31,7 +31,7 @@ class AuthWrapper extends StatelessWidget {
         }
 
         // Nao logado -> Login
-        return const LoginScreen();
+        return const LoginScreenV2();
       },
     );
   }
@@ -60,7 +60,7 @@ class _ProfileChecker extends StatelessWidget {
             user.initialWeight != null;
 
         if (hasProfile) {
-          return const HomeScreen();
+          return const HomeScreenV2();
         }
 
         return const ProfileSetupScreen();

@@ -21,11 +21,25 @@ abstract class AppColors {
   static const Color primary = Color(0xFFFA8038);       // Laranja vibrante
   static const Color primaryLight = Color(0xFFFFAB6B);  // Laranja claro
   static const Color primaryDark = Color(0xFFE06820);   // Laranja escuro
+  static const Color primaryGlow = Color(0xFFFF9A4D);   // Laranja brilhante (glow)
 
   /// Cor secundária - usada para elementos de apoio, gráficos, links secundários
   static const Color secondary = Color(0xFF256AD2);     // Azul
   static const Color secondaryLight = Color(0xFF5A8FE0); // Azul claro
   static const Color secondaryDark = Color(0xFF1A4FA0); // Azul escuro
+
+  // ============================================
+  // CORES PREMIUM (Squad Electric)
+  // ============================================
+
+  /// Lime - vitória, PR, streak
+  static const Color lime = Color(0xFFD6FF3B);
+
+  /// Magenta - social, challenges, squads
+  static const Color magenta = Color(0xFFFF3B8B);
+
+  /// Deep - fundo premium mais profundo
+  static const Color deep = Color(0xFF0B0D12);
 
   // ============================================
   // CORES SEMÂNTICAS (Feedback)
@@ -60,10 +74,18 @@ abstract class AppColors {
   static const Color surfaceLight = Color(0xFFFFFFFF);     // Cards brancos
   static const Color cardLight = Color(0xFFFFFFFF);
 
-  // Dark Theme
-  static const Color backgroundDark = Color(0xFF111214);  // Fundo principal
-  static const Color surfaceDark = Color(0xFF383B42);     // Cards, containers
-  static const Color cardDark = Color(0xFF383B42);        // Cards
+  // Dark Theme - Superfícies com mais profundidade
+  static const Color backgroundDark = Color(0xFF0B0D12);   // Fundo premium (deep)
+  static const Color backgroundElevated = Color(0xFF111214); // Scaffold original
+  static const Color surfaceDark = Color(0xFF1A1C22);      // Card base
+  static const Color surface2 = Color(0xFF22252D);         // Card hover / elevated
+  static const Color surface3 = Color(0xFF2D3039);         // Pressed / top nav
+  static const Color surfaceLine = Color(0xFF383B42);      // Divider line
+  static const Color cardDark = Color(0xFF1A1C22);         // Cards (= surfaceDark)
+
+  // Dark Theme - Bordas
+  static const Color borderDarkSubtle = Color(0xFF2A2D35); // Borda sutil
+  static const Color borderDarkStrong = Color(0xFF4B5563); // Borda forte
 
   // ============================================
   // CORES DE TEXTO
@@ -75,18 +97,19 @@ abstract class AppColors {
   static const Color textTertiaryLight = Color(0xFF94A3B8);
   static const Color textDisabledLight = Color(0xFFCBD5E1);
 
-  // Dark Theme
-  static const Color textPrimaryDark = Color(0xFFFFFFFF);   // Branco
-  static const Color textSecondaryDark = Color(0xFF9CA3AF); // Cinza claro
-  static const Color textTertiaryDark = Color(0xFF6B7280);  // Cinza médio
-  static const Color textDisabledDark = Color(0xFF4B5563);  // Cinza escuro
+  // Dark Theme - Hierarquia de texto aprimorada
+  static const Color textPrimaryDark = Color(0xFFFFFFFF);   // fg - Branco puro
+  static const Color textHighContrast = Color(0xFFF5F6F8);  // fg-1 - Alto contraste
+  static const Color textSecondaryDark = Color(0xFF9CA3AF); // fg-2 - Secundário
+  static const Color textTertiaryDark = Color(0xFF6B7280);  // fg-3 - Terciário
+  static const Color textDisabledDark = Color(0xFF4B5563);  // fg-4 - Desabilitado
 
   // ============================================
   // CORES DE BORDA
   // ============================================
 
   static const Color borderLight = Color(0xFFE2E8F0);
-  static const Color borderDark = Color(0xFF4B5563);  // Borda visível no dark
+  static const Color borderDark = Color(0xFF2A2D35);  // Borda sutil no dark
 
   // ============================================
   // CORES ESPECÍFICAS DO APP

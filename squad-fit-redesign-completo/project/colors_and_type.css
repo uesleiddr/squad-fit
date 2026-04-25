@@ -1,0 +1,318 @@
+/* =============================================================
+   SQUAD FIT — Design tokens (v2, premium refresh)
+   Sources: lib/core/theme/app_colors.dart, app_typography.dart,
+            app_radius.dart, app_shadows.dart, app_spacing.dart
+   Direction: keep core brand hues (orange + blue), push contrast,
+              add "electric" accents, tighter type, bolder motion.
+   ============================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  /* ---------- BRAND (from Flutter app_colors.dart) ---------- */
+  --sf-orange:          #FA8038;   /* primary */
+  --sf-orange-light:    #FFAB6B;
+  --sf-orange-dark:     #E06820;
+  --sf-orange-glow:     #FF9A4D;   /* premium accent, slightly brighter */
+
+  --sf-blue:            #256AD2;   /* secondary */
+  --sf-blue-light:      #5A8FE0;
+  --sf-blue-dark:       #1A4FA0;
+
+  /* Premium additions — "Squad Electric" palette for hype moments */
+  --sf-lime:            #D6FF3B;   /* victory / PR / streak */
+  --sf-magenta:         #FF3B8B;   /* squad social / challenges */
+  --sf-deep:            #0B0D12;   /* near-black, deeper than original */
+
+  /* ---------- SEMANTIC ---------- */
+  --sf-success:         #22C55E;
+  --sf-success-soft:    #DCFCE7;
+  --sf-success-dark:    #16A34A;
+
+  --sf-error:           #EF4444;
+  --sf-error-soft:      #FEE2E2;
+  --sf-error-dark:      #DC2626;
+
+  --sf-warning:         #F59E0B;
+  --sf-warning-soft:    #FEF3C7;
+  --sf-warning-dark:    #D97706;
+
+  --sf-info:            #256AD2;
+  --sf-info-soft:       #DBEAFE;
+
+  /* ---------- SURFACES (dark-first, the app's canonical mode) ---------- */
+  --sf-bg:              #0B0D12;   /* slight push from #111214 for premium depth */
+  --sf-bg-elev-0:       #111214;   /* original scaffold */
+  --sf-surface:         #1A1C22;   /* card base */
+  --sf-surface-2:       #22252D;   /* card hover / elevated */
+  --sf-surface-3:       #2D3039;   /* pressed / top nav */
+  --sf-surface-line:    #383B42;   /* original card bg, now used as divider */
+  --sf-border:          #2A2D35;
+  --sf-border-strong:   #4B5563;
+
+  /* Light-mode parity (for light screens / print) */
+  --sf-bg-l:            #E6E6E8;
+  --sf-surface-l:       #FFFFFF;
+  --sf-border-l:        #E2E8F0;
+
+  /* ---------- TEXT ---------- */
+  --sf-fg:              #FFFFFF;
+  --sf-fg-1:            #F5F6F8;   /* high contrast body */
+  --sf-fg-2:            #9CA3AF;   /* secondary */
+  --sf-fg-3:            #6B7280;   /* tertiary / caption */
+  --sf-fg-4:            #4B5563;   /* disabled */
+
+  --sf-fg-l:            #0F172A;
+  --sf-fg-l-2:          #64748B;
+  --sf-fg-l-3:          #94A3B8;
+
+  /* ---------- FEATURE HUES (from app) ---------- */
+  --sf-breakfast:       #F59E0B;
+  --sf-lunch:           #22C55E;
+  --sf-dinner:          #6366F1;
+  --sf-snack:           #EC4899;
+
+  --sf-macro-protein:   #EF4444;
+  --sf-macro-carbs:     #3B82F6;
+  --sf-macro-fat:       #F59E0B;
+
+  /* ---------- GRADIENTS ---------- */
+  --sf-grad-primary:    linear-gradient(135deg, #FA8038 0%, #E06820 100%);
+  --sf-grad-hype:       linear-gradient(135deg, #FF3B8B 0%, #FA8038 60%, #D6FF3B 100%);
+  --sf-grad-squad:      linear-gradient(135deg, #256AD2 0%, #1A4FA0 100%);
+  --sf-grad-streak:     linear-gradient(180deg, rgba(250,128,56,.22) 0%, rgba(250,128,56,0) 100%);
+  --sf-grad-card:       linear-gradient(180deg, rgba(255,255,255,.03) 0%, rgba(255,255,255,0) 100%);
+  --sf-grad-victory:    linear-gradient(135deg, #D6FF3B 0%, #22C55E 100%);
+
+  /* ---------- RADII ---------- */
+  --sf-radius-xs:       4px;
+  --sf-radius-sm:       8px;
+  --sf-radius-md:       12px;
+  --sf-radius-lg:       16px;
+  --sf-radius-xl:       20px;
+  --sf-radius-2xl:      24px;
+  --sf-radius-3xl:      32px;
+  --sf-radius-full:     9999px;
+
+  /* ---------- SPACING (4px scale, from app_spacing.dart) ---------- */
+  --sf-space-1:         4px;
+  --sf-space-2:         8px;
+  --sf-space-3:         12px;
+  --sf-space-4:         16px;
+  --sf-space-5:         20px;
+  --sf-space-6:         24px;
+  --sf-space-8:         32px;
+  --sf-space-10:        40px;
+  --sf-space-12:        48px;
+  --sf-space-16:        64px;
+
+  /* ---------- SHADOWS (dark-first, glow-enabled) ---------- */
+  --sf-shadow-xs:       0 1px 2px rgba(0,0,0,.40);
+  --sf-shadow-sm:       0 2px 4px rgba(0,0,0,.45);
+  --sf-shadow-md:       0 4px 12px rgba(0,0,0,.50), 0 2px 4px rgba(0,0,0,.35);
+  --sf-shadow-lg:       0 12px 32px rgba(0,0,0,.55), 0 4px 8px rgba(0,0,0,.35);
+  --sf-shadow-xl:       0 24px 60px rgba(0,0,0,.65);
+  --sf-glow-orange:     0 0 24px rgba(250,128,56,.45), 0 0 1px rgba(250,128,56,.9);
+  --sf-glow-lime:       0 0 24px rgba(214,255,59,.45);
+  --sf-glow-blue:       0 0 24px rgba(37,106,210,.45);
+
+  /* Inner borders (1px highlight for premium cards) */
+  --sf-inset-hi:        inset 0 1px 0 rgba(255,255,255,.06);
+  --sf-inset-ring:      inset 0 0 0 1px rgba(255,255,255,.04);
+
+  /* ---------- TYPE ---------- */
+  --sf-font-display:    "Space Grotesk", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --sf-font-body:       "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --sf-font-mono:       "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  --sf-font-num:        "Space Grotesk", "Inter", system-ui, sans-serif; /* tabular numbers */
+
+  /* Scale (from app_typography.dart + added display sizes) */
+  --sf-size-xs:         12px;
+  --sf-size-sm:         14px;
+  --sf-size-md:         16px;
+  --sf-size-lg:         18px;
+  --sf-size-xl:         20px;
+  --sf-size-2xl:        24px;
+  --sf-size-3xl:        30px;
+  --sf-size-4xl:        36px;
+  --sf-size-5xl:        48px;
+  --sf-size-6xl:        60px;
+  --sf-size-7xl:        84px;  /* for hero stat numbers */
+
+  --sf-weight-regular:  400;
+  --sf-weight-medium:   500;
+  --sf-weight-semibold: 600;
+  --sf-weight-bold:     700;
+  --sf-weight-black:    900;
+
+  /* ---------- MOTION ---------- */
+  --sf-ease-out:        cubic-bezier(.2,.8,.2,1);         /* standard exit */
+  --sf-ease-spring:     cubic-bezier(.34,1.56,.64,1);     /* playful bounce — Duolingo-ish */
+  --sf-ease-smooth:     cubic-bezier(.4,0,.2,1);
+  --sf-dur-fast:        120ms;
+  --sf-dur-base:        200ms;
+  --sf-dur-slow:        380ms;
+  --sf-dur-reveal:      600ms;
+
+  /* ---------- LAYOUT ---------- */
+  --sf-screen-pad-x:    16px;
+  --sf-screen-pad-y:    20px;
+  --sf-tap-min:         44px;   /* iOS HIG */
+  --sf-tap-comfort:     56px;   /* primary CTAs */
+}
+
+/* =============================================================
+   SEMANTIC ALIASES — use these in components
+   ============================================================= */
+:root {
+  --fg:            var(--sf-fg);
+  --fg-1:          var(--sf-fg-1);
+  --fg-2:          var(--sf-fg-2);
+  --fg-3:          var(--sf-fg-3);
+  --bg:            var(--sf-bg);
+  --bg-elev:       var(--sf-surface);
+  --bg-elev-hi:    var(--sf-surface-2);
+  --line:          var(--sf-border);
+  --brand:         var(--sf-orange);
+  --brand-soft:    color-mix(in oklab, var(--sf-orange) 14%, transparent);
+  --brand-ink:     #fff;
+  --squad:         var(--sf-blue);
+  --victory:       var(--sf-lime);
+}
+
+/* =============================================================
+   BASE
+   ============================================================= */
+html, body {
+  background: var(--sf-bg);
+  color: var(--sf-fg-1);
+  font-family: var(--sf-font-body);
+  font-size: var(--sf-size-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* =============================================================
+   SEMANTIC TYPE CLASSES — the "h1 / h2 / p" of the system
+   ============================================================= */
+
+/* Display — hero screens, onboarding, victory */
+.sf-display-xl {
+  font-family: var(--sf-font-display);
+  font-weight: var(--sf-weight-black);
+  font-size: clamp(56px, 12vw, 96px);
+  line-height: .92;
+  letter-spacing: -0.04em;
+}
+.sf-display-lg {
+  font-family: var(--sf-font-display);
+  font-weight: var(--sf-weight-bold);
+  font-size: var(--sf-size-6xl);
+  line-height: .95;
+  letter-spacing: -0.03em;
+}
+.sf-display-md {
+  font-family: var(--sf-font-display);
+  font-weight: var(--sf-weight-bold);
+  font-size: var(--sf-size-5xl);
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+/* Stat number — the big kcal / kg / streak readouts */
+.sf-stat-xl {
+  font-family: var(--sf-font-num);
+  font-weight: var(--sf-weight-black);
+  font-size: var(--sf-size-7xl);
+  line-height: .9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.sf-stat-lg {
+  font-family: var(--sf-font-num);
+  font-weight: var(--sf-weight-bold);
+  font-size: var(--sf-size-5xl);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.sf-stat-md {
+  font-family: var(--sf-font-num);
+  font-weight: var(--sf-weight-bold);
+  font-size: var(--sf-size-3xl);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.sf-stat-sm {
+  font-family: var(--sf-font-num);
+  font-weight: var(--sf-weight-semibold);
+  font-size: var(--sf-size-xl);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Titles */
+.sf-title-page {
+  font-family: var(--sf-font-display);
+  font-weight: var(--sf-weight-bold);
+  font-size: var(--sf-size-2xl);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.sf-title-section {
+  font-family: var(--sf-font-body);
+  font-weight: var(--sf-weight-semibold);
+  font-size: var(--sf-size-lg);
+  letter-spacing: -0.01em;
+}
+.sf-title-item {
+  font-family: var(--sf-font-body);
+  font-weight: var(--sf-weight-medium);
+  font-size: var(--sf-size-md);
+}
+
+/* Body */
+.sf-body       { font: 400 var(--sf-size-md)/1.5 var(--sf-font-body); color: var(--sf-fg-1); }
+.sf-body-sec   { font: 400 var(--sf-size-sm)/1.45 var(--sf-font-body); color: var(--sf-fg-2); }
+.sf-caption    { font: 400 var(--sf-size-xs)/1.4 var(--sf-font-body); color: var(--sf-fg-3); }
+
+/* Labels / Buttons / Units */
+.sf-button     { font: 600 var(--sf-size-md) var(--sf-font-body); letter-spacing: .02em; }
+.sf-label {
+  font: 600 var(--sf-size-xs) var(--sf-font-body);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--sf-fg-2);
+}
+.sf-unit       { font: 400 var(--sf-size-md) var(--sf-font-body); color: var(--sf-fg-2); }
+.sf-mono       { font: 500 var(--sf-size-sm) var(--sf-font-mono); letter-spacing: .02em; }
+
+/* =============================================================
+   Utilities
+   ============================================================= */
+.sf-card {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-lg);
+  box-shadow: var(--sf-shadow-sm), var(--sf-inset-hi);
+}
+.sf-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--sf-radius-full);
+  background: var(--sf-surface-2);
+  color: var(--sf-fg-1);
+  font: 600 12px var(--sf-font-body);
+  letter-spacing: .04em;
+}
+.sf-kbd-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px; height: 22px; padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+  font: 500 11px var(--sf-font-mono);
+  color: var(--sf-fg-2);
+}

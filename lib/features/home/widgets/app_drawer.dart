@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../auth/services/auth_service.dart';
-import '../../competition/screens/competition_screen.dart';
+import '../../competition/screens/competition_screen_v2.dart';
 import '../../nutrition/screens/screens.dart';
-import '../../weight/screens/weight_screen.dart';
+import '../../weight/screens/weight_screen_v2.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -99,19 +99,19 @@ class AppDrawer extends StatelessWidget {
               icon: Icons.monitor_weight_outlined,
               selectedIcon: Icons.monitor_weight,
               title: 'Peso',
-              onTap: () => _navigateTo(context, const WeightScreen()),
+              onTap: () => _navigateTo(context, const WeightScreenV2()),
             ),
             _DrawerItem(
               icon: Icons.emoji_events_outlined,
               selectedIcon: Icons.emoji_events,
               title: 'Desafio',
-              onTap: () => _navigateTo(context, const CompetitionScreen()),
+              onTap: () => _navigateTo(context, const CompetitionScreenV2()),
             ),
             _DrawerItem(
               icon: Icons.restaurant_menu_outlined,
               selectedIcon: Icons.restaurant_menu,
               title: 'Diário',
-              onTap: () => _navigateTo(context, const NutritionScreen()),
+              onTap: () => _navigateTo(context, const NutritionScreenV2()),
             ),
             const Divider(indent: 16, endIndent: 16),
             _DrawerItem(

@@ -41,6 +41,9 @@ abstract class AppRadius {
   /// 24px - Muito grande
   static const double xxl = 24;
 
+  /// 32px - Extra grande (modais premium)
+  static const double xxxl = 32;
+
   /// 9999px - Totalmente redondo (pílula)
   static const double full = 9999;
 

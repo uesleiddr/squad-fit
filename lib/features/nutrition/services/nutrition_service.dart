@@ -426,6 +426,64 @@ class NutritionService {
     return false;
   }
 
+  /// Calcula o streak (dias consecutivos com pelo menos uma refeição registrada)
+  /// Conta de hoje para trás até encontrar um dia sem refeição
+  Future<int> getStreak() async {
+    if (_userId == null) return 0;
+
+    try {
+      // Busca as datas distintas com refeições, ordenadas do mais recente
+      final response = await _supabase
+          .from('meal_entries')
+          .select('recorded_at')
+          .eq('user_id', _userId!)
+          .order('recorded_at', ascending: false);
+
+      if (response.isEmpty) return 0;
+
+      // Agrupa por data (ignora horário)
+      final Set<String> datesWithMeals = {};
+      for (final entry in response) {
+        final date = DateTime.parse(entry['recorded_at']);
+        final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        datesWithMeals.add(dateKey);
+      }
+
+      // Conta dias consecutivos a partir de hoje
+      int streak = 0;
+      DateTime checkDate = DateTime.now();
+
+      while (true) {
+        final dateKey = '${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}';
+
+        if (datesWithMeals.contains(dateKey)) {
+          streak++;
+          checkDate = checkDate.subtract(const Duration(days: 1));
+        } else {
+          // Se for hoje e não tiver refeição ainda, verifica se ontem tem
+          // para não quebrar o streak logo de manhã
+          if (streak == 0) {
+            checkDate = checkDate.subtract(const Duration(days: 1));
+            final yesterdayKey = '${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}';
+            if (datesWithMeals.contains(yesterdayKey)) {
+              // Conta a partir de ontem
+              while (datesWithMeals.contains('${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}')) {
+                streak++;
+                checkDate = checkDate.subtract(const Duration(days: 1));
+              }
+            }
+          }
+          break;
+        }
+      }
+
+      return streak;
+    } catch (e) {
+      dev.log('Erro ao calcular streak: $e', name: 'Nutrition');
+      return 0;
+    }
+  }
+
   /// Stream de refeições do dia (atualização em tempo real)
   Stream<List<MealEntry>> getMealsForDateStream(DateTime date) {
     if (_userId == null) return Stream.value([]);

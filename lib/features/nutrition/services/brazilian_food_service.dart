@@ -28,14 +28,49 @@ class BrazilianFood {
   /// Verifica se o alimento é uma bebida (para usar ml como unidade padrão)
   bool get isBeverage {
     final nameLower = name.toLowerCase();
+
+    // Primeiro verifica se é claramente um sólido (mesmo que contenha palavras de bebida)
+    final isSolid = nameLower.contains('em pó') ||
+        nameLower.contains('em po') ||
+        nameLower.contains(' pó,') ||
+        nameLower.contains(' po,') ||
+        nameLower.contains('torrado') ||
+        nameLower.contains('moído') ||
+        nameLower.contains('moido') ||
+        nameLower.contains('em grão') ||
+        nameLower.contains('em grao') ||
+        nameLower.contains('seco') ||
+        nameLower.contains('desidratado') ||
+        nameLower.contains('instantâneo') ||
+        nameLower.contains('instantaneo') ||
+        nameLower.contains('condensado') ||
+        nameLower.contains('sachê') ||
+        nameLower.contains('sache') ||
+        nameLower.contains('cápsula') ||
+        nameLower.contains('capsula') ||
+        nameLower.contains('tablete') ||
+        nameLower.contains('barra') ||
+        nameLower.contains('queijo') ||
+        nameLower.contains('sorvete') ||
+        nameLower.contains('pudim') ||
+        nameLower.contains('doce de leite') ||
+        nameLower.contains('manteiga');
+
+    if (isSolid) return false;
+
+    // Verifica se é uma bebida
     return nameLower.contains('bebida') ||
         nameLower.contains('suco') ||
         nameLower.contains('leite') ||
         nameLower.contains('café') ||
+        nameLower.contains('cafe') ||
         nameLower.contains('chá') ||
+        nameLower.contains('cha ') ||
         nameLower.contains('infusão') ||
+        nameLower.contains('infusao') ||
         nameLower.contains('refrigerante') ||
         nameLower.contains('água') ||
+        nameLower.contains('agua') ||
         nameLower.contains('vitamina') ||
         nameLower.contains('cappuccino') ||
         nameLower.contains('shake');
