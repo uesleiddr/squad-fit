@@ -7,7 +7,6 @@ import '../../../core/services/competition_service.dart';
 import '../../../core/services/deep_link_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
-import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
@@ -33,6 +32,12 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
     });
   }
 
+  Future<void> _onRefresh() async {
+    _refreshStream();
+    // Aguarda um pouco para dar tempo do stream atualizar
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,22 +53,27 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
               key: _streamKey,
               stream: _competitionService.getMyCompetitionsStream(),
               builder: (context, snapshot) {
-                return CustomScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  slivers: [
-                    // App bar
-                    SliverToBoxAdapter(
-                      child: _buildAppBar(context, snapshot.data),
-                    ),
-
-                    // Body
-                    SliverPadding(
-                      padding: context.screenPadding.copyWith(top: 8),
-                      sliver: SliverToBoxAdapter(
-                        child: _buildBody(context, snapshot),
+                return RefreshIndicator(
+                  onRefresh: _onRefresh,
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.surfaceDark,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      // App bar
+                      SliverToBoxAdapter(
+                        child: _buildAppBar(context, snapshot.data),
                       ),
-                    ),
-                  ],
+
+                      // Body
+                      SliverPadding(
+                        padding: context.screenPadding.copyWith(top: 8),
+                        sliver: SliverToBoxAdapter(
+                          child: _buildBody(context, snapshot),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -128,27 +138,6 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          // Back button
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderDark),
-              ),
-              child: Icon(
-                Icons.arrow_back,
-                size: 20,
-                color: AppColors.textHighContrast,
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
           // Title
           Expanded(
             child: Text(
@@ -642,7 +631,7 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
 
   void _copyCode(BuildContext context, String code) {
     Clipboard.setData(ClipboardData(text: code));
-    SnackBarHelper.showSuccess(context, 'Código copiado!');
+    SFToast.success(context, 'Código copiado!');
   }
 
   Future<void> _shareWhatsApp(BuildContext context, CompetitionModel competition) async {
@@ -658,10 +647,7 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
       await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (context.mounted) {
-        SnackBarHelper.showError(
-          context,
-          'Não foi possível abrir o WhatsApp.',
-        );
+        SFToast.error(context, 'Não foi possível abrir o WhatsApp');
       }
     }
   }
@@ -671,7 +657,12 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
 
     if (competition != null && context.mounted) {
       _refreshStream();
-      SnackBarHelper.showSuccess(context, 'Desafio criado com sucesso!');
+      SFToast.show(
+        context,
+        title: 'Desafio criado',
+        message: competition.name,
+        type: SFToastType.success,
+      );
     }
   }
 
@@ -774,11 +765,12 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
       try {
         await _competitionService.deleteCompetition(competition.id);
         if (context.mounted) {
-          SnackBarHelper.showSuccess(context, 'Desafio excluído com sucesso');
+          _refreshStream(); // Força atualização para mostrar estado vazio
+          SFToast.success(context, 'Desafio excluído com sucesso');
         }
       } catch (e) {
         if (context.mounted) {
-          SnackBarHelper.showError(context, 'Não foi possível excluir o desafio.');
+          SFToast.error(context, 'Não foi possível excluir o desafio');
         }
       }
     }
@@ -875,11 +867,12 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
       try {
         await _competitionService.leaveCompetition(competition.id);
         if (context.mounted) {
-          SnackBarHelper.showSuccess(context, 'Você saiu do desafio');
+          _refreshStream(); // Força atualização para mostrar estado vazio
+          SFToast.success(context, 'Você saiu do desafio');
         }
       } catch (e) {
         if (context.mounted) {
-          SnackBarHelper.showError(context, 'Não foi possível sair do desafio.');
+          SFToast.error(context, 'Não foi possível sair do desafio');
         }
       }
     }
@@ -892,7 +885,7 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
     final result = await EditCompetitionModal.show(context, competition);
 
     if (result == true && context.mounted) {
-      SnackBarHelper.showSuccess(context, 'Desafio atualizado com sucesso');
+      SFToast.success(context, 'Desafio atualizado com sucesso');
     }
   }
 }

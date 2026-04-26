@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/models/user_model.dart';
 import '../../../core/models/weight_record_model.dart';
+import '../../../core/services/user_service.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
-import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
@@ -19,10 +20,36 @@ class WeightScreenV2 extends StatefulWidget {
 class _WeightScreenV2State extends State<WeightScreenV2> {
   final _formKey = GlobalKey<FormState>();
   final _weightService = getIt<WeightService>();
+  final _userService = getIt<UserService>();
   final _weightController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+  Key _streamKey = UniqueKey();
+  UserModel? _user;
+  double? _latestWeight;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = await _userService.getCurrentUser();
+    if (mounted) {
+      setState(() {
+        _user = user;
+      });
+    }
+  }
+
+  Future<void> _onRefresh() async {
+    setState(() {
+      _streamKey = UniqueKey();
+    });
+    await _loadUserData();
+  }
 
   @override
   void dispose() {
@@ -77,7 +104,12 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
       await _weightService.addWeight(weight, date: _selectedDate);
 
       if (mounted) {
-        SnackBarHelper.showSuccess(context, 'Peso registrado com sucesso!');
+        SFToast.show(
+          context,
+          title: 'Peso registrado',
+          message: '${weight.toStringAsFixed(1)} kg em ${DateFormatter.format(_selectedDate)}',
+          type: SFToastType.success,
+        );
         _weightController.clear();
         setState(() {
           _selectedDate = DateTime.now();
@@ -85,12 +117,33 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
       }
     } catch (e) {
       if (mounted) {
-        SnackBarHelper.showError(
-            context, 'Não foi possível registrar o peso. Tente novamente.');
+        SFToast.error(context, 'Não foi possível registrar o peso');
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _editWeightGoal() async {
+    final newGoal = await SFWeightGoalModal.show(
+      context,
+      currentGoal: _user?.goalWeight,
+      currentWeight: _latestWeight,
+    );
+
+    if (newGoal != null && mounted) {
+      try {
+        await _userService.updateUser(goalWeight: newGoal);
+        await _loadUserData();
+        if (mounted) {
+          SFToast.success(context, 'Meta atualizada para ${newGoal.toStringAsFixed(1)} kg');
+        }
+      } catch (e) {
+        if (mounted) {
+          SFToast.error(context, 'Erro ao atualizar meta');
+        }
       }
     }
   }
@@ -137,12 +190,11 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
       try {
         await _weightService.deleteWeight(record.id);
         if (mounted) {
-          SnackBarHelper.showSuccess(context, 'Registro excluído');
+          SFToast.success(context, 'Registro excluído');
         }
       } catch (e) {
         if (mounted) {
-          SnackBarHelper.showError(
-              context, 'Não foi possível excluir o registro.');
+          SFToast.error(context, 'Não foi possível excluir o registro');
         }
       }
     }
@@ -159,33 +211,43 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
             _buildBackgroundGlows(),
 
             // Content
-            CustomScrollView(
-              physics: const ClampingScrollPhysics(),
-              slivers: [
-                // App bar
-                SliverToBoxAdapter(
-                  child: _buildAppBar(context),
-                ),
+            RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: AppColors.primary,
+              backgroundColor: AppColors.surfaceDark,
+              child: CustomScrollView(
+                key: _streamKey,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // App bar
+                  SliverToBoxAdapter(
+                    child: _buildAppBar(context),
+                  ),
 
-                // Body
-                SliverPadding(
-                  padding: context.screenPadding.copyWith(top: 8),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Registration form
-                        _buildRegistrationForm(),
-                        const SizedBox(height: 24),
+                  // Body
+                  SliverPadding(
+                    padding: context.screenPadding.copyWith(top: 8),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Goal card
+                          _buildGoalCard(),
+                          const SizedBox(height: 16),
 
-                        // History section
-                        _buildHistorySection(),
-                        const SizedBox(height: 100),
-                      ],
+                          // Registration form
+                          _buildRegistrationForm(),
+                          const SizedBox(height: 24),
+
+                          // History section
+                          _buildHistorySection(),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -239,27 +301,6 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          // Back button
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderDark),
-              ),
-              child: Icon(
-                Icons.arrow_back,
-                size: 20,
-                color: AppColors.textHighContrast,
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
           // Title
           Text(
             'Peso',
@@ -271,6 +312,153 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGoalCard() {
+    final goalWeight = _user?.goalWeight;
+    final hasGoal = goalWeight != null;
+    final diff = hasGoal && _latestWeight != null
+        ? _latestWeight! - goalWeight
+        : null;
+
+    return GestureDetector(
+      onTap: _editWeightGoal,
+      child: SFCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.lime,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.lime.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.flag_rounded,
+                size: 24,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'META DE PESO',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                      color: AppColors.textTertiaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (hasGoal)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          goalWeight.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontDisplay,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'kg',
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondaryDark,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      'Definir meta',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondaryDark,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Diff badge or edit icon
+            if (diff != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: (diff > 0 ? AppColors.lime : AppColors.secondary)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: (diff > 0 ? AppColors.lime : AppColors.secondary)
+                        .withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      diff > 0 ? Icons.arrow_downward : Icons.arrow_upward,
+                      size: 14,
+                      color: diff > 0 ? AppColors.lime : AppColors.secondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${diff.abs().toStringAsFixed(1)} kg',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: diff > 0 ? AppColors.lime : AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderDark),
+                ),
+                child: Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: AppColors.textSecondaryDark,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -532,6 +720,15 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
             }
 
             final records = snapshot.data ?? [];
+
+            // Update latest weight for goal card
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (records.isNotEmpty && _latestWeight != records.first.weight) {
+                setState(() {
+                  _latestWeight = records.first.weight;
+                });
+              }
+            });
 
             if (records.isEmpty) {
               return SFCard(

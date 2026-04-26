@@ -25,8 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Padding(
           padding: const EdgeInsets.only(top: 16),
           child: Image.asset(
-            'assets/logo/SquadFit-logo-transparent.png',
-            height: 168,
+            'assets/logo/squadfit-icon.png',
+            height: 120,
           ),
         ),
         centerTitle: true,

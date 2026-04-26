@@ -47,6 +47,7 @@ class InviteFriendsModalV2 extends StatelessWidget {
     final code = competition.inviteCode;
     const maxMembers = 20;
     final slotsRemaining = maxMembers - memberCount;
+    final systemNavPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return Container(
       decoration: BoxDecoration(
@@ -78,7 +79,7 @@ class InviteFriendsModalV2 extends StatelessWidget {
           ),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + systemNavPadding),
             child: Column(
               children: [
                 // Header

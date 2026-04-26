@@ -10,11 +10,13 @@ import '../services/services.dart';
 /// Modal V2 para adicionar alimento a uma refeição
 class AddMealModalV2 extends StatefulWidget {
   final MealType mealType;
+  final DateTime selectedDate;
   final void Function(MealEntry entry)? onMealAdded;
 
   const AddMealModalV2({
     super.key,
     required this.mealType,
+    required this.selectedDate,
     this.onMealAdded,
   });
 
@@ -22,12 +24,16 @@ class AddMealModalV2 extends StatefulWidget {
   static Future<MealEntry?> show(
     BuildContext context, {
     required MealType mealType,
+    required DateTime selectedDate,
   }) {
     return showModalBottomSheet<MealEntry>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AddMealModalV2(mealType: mealType),
+      builder: (context) => AddMealModalV2(
+        mealType: mealType,
+        selectedDate: selectedDate,
+      ),
     );
   }
 
@@ -155,7 +161,7 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
     setState(() => _isSearching = true);
 
     try {
-      final results = await _ragService.search(query, limit: 6);
+      final results = await _ragService.search(query, limit: 10);
       if (mounted) {
         setState(() {
           _searchResults = results;
@@ -178,7 +184,8 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
       _editingFood = food;
       _editingRecentFood = null;
       _quantity = 100;
-      _unit = 'g';
+      // Define a unidade baseado no tipo de alimento (ml para bebidas, g para sólidos)
+      _unit = food.isBeverage ? 'ml' : 'g';
     });
   }
 
@@ -252,6 +259,35 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
     });
   }
 
+  /// Retorna os chips de unidade baseado no tipo de alimento (bebida ou sólido)
+  List<Widget> _buildUnitChips() {
+    final isBeverage = _editingFood?.isBeverage ?? false;
+
+    if (isBeverage) {
+      // Unidades para bebidas
+      return [
+        _buildUnitChip('ml', null),
+        const SizedBox(width: 6),
+        _buildUnitChip('copo', 200),
+        const SizedBox(width: 6),
+        _buildUnitChip('xícara', 240),
+        const SizedBox(width: 6),
+        _buildUnitChip('colher', 15),
+      ];
+    } else {
+      // Unidades para sólidos
+      return [
+        _buildUnitChip('g', null),
+        const SizedBox(width: 6),
+        _buildUnitChip('porção', 100),
+        const SizedBox(width: 6),
+        _buildUnitChip('fatia', 25),
+        const SizedBox(width: 6),
+        _buildUnitChip('colher', 15),
+      ];
+    }
+  }
+
   // Getters para o alimento sendo editado
   double get _baseCalories => _editingFood?.calories ?? _editingRecentFood?.calories ?? 0;
   double get _baseProtein => _editingFood?.protein ?? _editingRecentFood?.protein ?? 0;
@@ -278,7 +314,16 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
     setState(() => _isSaving = true);
 
     try {
+      // Usa a data selecionada, mantendo a hora atual
       final now = DateTime.now();
+      final recordedAt = DateTime(
+        widget.selectedDate.year,
+        widget.selectedDate.month,
+        widget.selectedDate.day,
+        now.hour,
+        now.minute,
+        now.second,
+      );
       final description = _selectedItems.map((f) => f.name).join(', ');
 
       final items = _selectedItems.map((item) {
@@ -292,7 +337,7 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
           protein: item.protein,
           carbs: item.carbs,
           fat: item.fat,
-          createdAt: now,
+          createdAt: recordedAt,
         );
       }).toList();
 
@@ -300,6 +345,7 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
         mealType: widget.mealType,
         description: description,
         items: items,
+        recordedAt: recordedAt,
       );
 
       if (mounted) {
@@ -433,8 +479,11 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardPadding = mediaQuery.viewInsets.bottom;
+    final systemNavPadding = mediaQuery.viewPadding.bottom;
+    final bottomPadding = keyboardPadding > 0 ? keyboardPadding : systemNavPadding;
+    final screenHeight = mediaQuery.size.height;
     final minHeight = screenHeight * 0.55;
 
     return Container(
@@ -1232,19 +1281,11 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
 
         const SizedBox(height: 10),
 
-        // Unit chips
+        // Unit chips - diferentes para bebidas vs sólidos
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: [
-              _buildUnitChip('g', null),
-              const SizedBox(width: 6),
-              _buildUnitChip('porção', 100),
-              const SizedBox(width: 6),
-              _buildUnitChip('fatia', 25),
-              const SizedBox(width: 6),
-              _buildUnitChip('colher', 15),
-            ],
+            children: _buildUnitChips(),
           ),
         ),
 

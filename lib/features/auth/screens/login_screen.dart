@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const SizedBox(height: 32),
                   Image.asset(
-                    'assets/logo/SquadFit-logo-transparent.png',
+                    'assets/logo/squadfit-icon.png',
                     height: 200,
                   ),
                   const SizedBox(height: 24),

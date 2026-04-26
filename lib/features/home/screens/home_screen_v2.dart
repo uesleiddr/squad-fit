@@ -15,8 +15,8 @@ import '../../../shared/widgets/v2/v2.dart';
 import '../../nutrition/models/daily_summary.dart';
 import '../../nutrition/screens/nutrition_screen_v2.dart';
 import '../../nutrition/services/nutrition_service.dart';
-import '../widgets/app_drawer.dart';
 import '../widgets/ranking_list_v2.dart';
+import '../../settings/screens/settings_screen_v2.dart';
 
 class HomeScreenV2 extends StatefulWidget {
   const HomeScreenV2({super.key});
@@ -30,17 +30,35 @@ class _HomeScreenV2State extends State<HomeScreenV2> {
   final _userService = getIt<UserService>();
   final _weightService = getIt<WeightService>();
   final _nutritionService = getIt<NutritionService>();
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  Key _refreshKey = UniqueKey();
+
+  Future<void> _onRefresh() async {
+    setState(() {
+      _refreshKey = UniqueKey();
+    });
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  void _showUserMenu(BuildContext context) {
+    SFUserMenu.show(
+      context,
+      onSettingsTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreenV2()),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: AppColors.backgroundDark,
-      drawer: const AppDrawer(),
-      drawerEdgeDragWidth: 60,
       body: SafeArea(
         child: StreamBuilder<List<CompetitionModel>>(
+          key: _refreshKey,
           stream: _competitionService.getMyCompetitionsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -51,26 +69,31 @@ class _HomeScreenV2State extends State<HomeScreenV2> {
             final currentCompetition =
                 _competitionService.getCurrentCompetition(competitions);
 
-            return CustomScrollView(
-              physics: const ClampingScrollPhysics(),
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _buildHeader(),
-                      const SizedBox(height: 16),
-                      _buildStreakBanner(),
-                      const SizedBox(height: 14),
-                      _buildNutritionHeroCard(),
-                      const SizedBox(height: 14),
-                      _buildQuickStats(currentCompetition),
-                      const SizedBox(height: 20),
-                      RankingListV2(competition: currentCompetition),
-                    ]),
+            return RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: AppColors.primary,
+              backgroundColor: AppColors.surfaceDark,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildHeader(),
+                        const SizedBox(height: 16),
+                        _buildStreakBanner(),
+                        const SizedBox(height: 14),
+                        _buildNutritionHeroCard(),
+                        const SizedBox(height: 14),
+                        _buildQuickStats(currentCompetition),
+                        const SizedBox(height: 20),
+                        RankingListV2(competition: currentCompetition),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),
@@ -97,7 +120,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                onTap: () => _showUserMenu(context),
                 child: SFAvatar(
                   initials: firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U',
                   size: 40,

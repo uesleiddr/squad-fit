@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="chevronGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFAB6B"/>
+      <stop offset="1" stop-color="#FA8038"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Chevrons centralizados e escalados para 512x512 -->
+  <!-- Usando viewBox original 68x72 escalado para caber bem no centro -->
+  <g transform="translate(128, 112) scale(4.8)">
+    <!-- Primeiro chevron -->
+    <path d="M6 30 L24 4 L36 4 L18 30 L36 56 L24 56 Z" fill="url(#chevronGrad)"/>
+    <!-- Segundo chevron (60% opacidade) -->
+    <path d="M30 30 L48 4 L60 4 L42 30 L60 56 L48 56 Z" fill="url(#chevronGrad)" opacity="0.6"/>
+  </g>
+</svg>

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
 import '../models/models.dart';
@@ -75,17 +74,46 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
     _loadData();
   }
 
+  Future<void> _editCalorieGoal() async {
+    final currentGoal = _summary?.calorieGoal ?? 2000;
+    final newGoal = await SFCalorieGoalModal.show(
+      context,
+      currentGoal: currentGoal,
+    );
+
+    if (newGoal != null && mounted) {
+      try {
+        await _nutritionService.updateCalorieGoal(newGoal);
+        await _loadData();
+        if (mounted) {
+          SFToast.success(context, 'Meta atualizada para $newGoal kcal');
+        }
+      } catch (e) {
+        if (mounted) {
+          SFToast.error(context, 'Erro ao atualizar meta');
+        }
+      }
+    }
+  }
+
   void _onMealAdded(MealEntry? result) {
     if (result != null && mounted) {
       _loadData();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Refeição adicionada: ${result.description}')),
+      SFToast.show(
+        context,
+        title: 'Refeição adicionada',
+        message: '${result.description} · +${result.totalCalories} kcal',
+        type: SFToastType.success,
       );
     }
   }
 
   Future<void> _openAddMealScreen(MealType mealType) async {
-    final result = await AddMealModalV2.show(context, mealType: mealType);
+    final result = await AddMealModalV2.show(
+      context,
+      mealType: mealType,
+      selectedDate: _selectedDate,
+    );
     _onMealAdded(result);
   }
 
@@ -108,21 +136,26 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
     return _summary!.meals.where((m) => m.mealType == type).toList();
   }
 
-  Future<void> _deleteMealEntry(MealEntry entry) async {
+  Future<void> _deleteMealType(List<MealEntry> entries) async {
+    if (entries.isEmpty) return;
+
+    final totalItems = entries.fold<int>(0, (sum, e) => sum + e.items.length);
+    final mealLabel = entries.first.mealType.label;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Excluir refeição?',
+          'Excluir $mealLabel?',
           style: TextStyle(
             fontFamily: AppTypography.fontDisplay,
             color: Colors.white,
           ),
         ),
         content: Text(
-          'Deseja excluir "${entry.description}"?',
+          'Isso vai excluir $totalItems ${totalItems == 1 ? 'item' : 'itens'} registrados.',
           style: TextStyle(
             fontFamily: AppTypography.fontFamily,
             color: AppColors.textSecondaryDark,
@@ -146,120 +179,64 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
 
     if (confirmed == true) {
       try {
-        await _nutritionService.deleteMealEntry(entry.id);
+        // Exclui todas as entries desse tipo
+        for (final entry in entries) {
+          await _nutritionService.deleteMealEntry(entry.id);
+        }
         _loadData();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Refeição excluída')),
-          );
+          SFToast.success(context, '$mealLabel excluído');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao excluir: $e')),
-          );
+          SFToast.error(context, 'Erro ao excluir refeição');
         }
       }
     }
   }
 
   void _showMealOptions(MealEntry entry) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface2,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.borderDarkStrong,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            ListTile(
-              leading:
-                  Icon(Icons.delete_outline, color: AppColors.error),
-              title: Text('Excluir refeição',
-                  style: TextStyle(color: Colors.white)),
-              subtitle: Text(
-                entry.description,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: AppColors.textSecondaryDark),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteMealEntry(entry);
-              },
-            ),
-          ],
+    final mealColor = _getMealColor(entry.mealType);
+
+    // Agrupa todos os items e calorias de todas as entries do mesmo tipo
+    final allItems = _getItemsForMealType(entry.mealType);
+    final totalCalories = _getCaloriesForMealType(entry.mealType);
+    final entries = _getMealEntriesForType(entry.mealType);
+
+    SFActionSheet.show(
+      context,
+      title: entry.mealType.label,
+      subtitle: '${allItems.length} ${allItems.length == 1 ? 'item' : 'itens'} · $totalCalories kcal',
+      icon: entry.mealType.icon,
+      iconColor: mealColor,
+      actions: [
+        SFActionSheetItem(
+          icon: Icons.edit_outlined,
+          label: 'Editar refeição',
+          description: 'Altere itens ou quantidade',
+          onTap: () => _editMealType(entry.mealType, entries),
         ),
-      ),
+        SFActionSheetItem(
+          icon: Icons.delete_outline,
+          label: 'Excluir refeição',
+          description: 'Essa ação não pode ser desfeita',
+          isDestructive: true,
+          onTap: () => _deleteMealType(entries),
+        ),
+      ],
     );
   }
 
-  void _showMealSelectionDialog(List<MealEntry> entries) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface2,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.borderDarkStrong,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Selecione a refeição',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontDisplay,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            ...entries.map((entry) => ListTile(
-                  leading: Icon(Icons.restaurant,
-                      color: AppColors.textSecondaryDark),
-                  title: Text(
-                    entry.description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text('${entry.totalCalories} kcal',
-                      style: TextStyle(color: AppColors.textSecondaryDark)),
-                  trailing: IconButton(
-                    icon: Icon(Icons.delete_outline, color: AppColors.error),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _deleteMealEntry(entry);
-                    },
-                  ),
-                )),
-          ],
-        ),
-      ),
-    );
+  Future<void> _editMealType(MealType mealType, List<MealEntry> entries) async {
+    if (entries.isEmpty) return;
+
+    final hasChanges = await SFEditMealModal.showForEntries(context, mealType, entries);
+    if (hasChanges == true && mounted) {
+      await _loadData();
+      if (mounted) {
+        SFToast.success(context, 'Refeição atualizada');
+      }
+    }
   }
 
   @override
@@ -269,37 +246,43 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
     return Scaffold(
       backgroundColor: AppColors.deep,
       body: SafeArea(
-            child: _isLoading
-                ? const LoadingIndicator()
-                : _error != null
-                    ? _buildErrorState()
-                    : CustomScrollView(
-                        slivers: [
-                          // Header
-                          SliverToBoxAdapter(child: _buildHeader()),
+        child: _isLoading
+            ? const LoadingIndicator()
+            : _error != null
+                ? _buildErrorState()
+                : RefreshIndicator(
+                    onRefresh: _loadData,
+                    color: AppColors.primary,
+                    backgroundColor: AppColors.surfaceDark,
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        // Header
+                        SliverToBoxAdapter(child: _buildHeader()),
 
-                          // Date selector
-                          SliverToBoxAdapter(child: _buildDateStrip()),
+                        // Date selector
+                        SliverToBoxAdapter(child: _buildDateStrip()),
 
-                          // Content
-                          SliverPadding(
-                            padding: const EdgeInsets.all(16),
-                            sliver: SliverList(
-                              delegate: SliverChildListDelegate([
-                                // Hero card with calorie ring
-                                _buildHeroCard(summary),
-                                const SizedBox(height: 16),
+                        // Content
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate([
+                              // Hero card with calorie ring
+                              _buildHeroCard(summary),
+                              const SizedBox(height: 16),
 
-                                // Meal sections
-                                ...MealType.values.map((type) =>
-                                    _buildMealCard(type)),
+                              // Meal sections
+                              ...MealType.values.map((type) =>
+                                  _buildMealCard(type)),
 
-                                const SizedBox(height: 100),
-                              ]),
-                            ),
+                              const SizedBox(height: 100),
+                            ]),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
@@ -347,10 +330,7 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
           ),
           GestureDetector(
             onTap: () {
-              SnackBarHelper.showInfo(
-                context,
-                'Filtros em desenvolvimento',
-              );
+              SFToast.info(context, 'Filtros em desenvolvimento');
             },
             child: Container(
               width: 40,
@@ -527,6 +507,42 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
                           '${remaining.abs()}',
                           'kcal',
                           remaining >= 0 ? AppColors.lime : AppColors.error,
+                        ),
+                        const SizedBox(height: 12),
+                        // Edit goal button
+                        GestureDetector(
+                          onTap: _editCalorieGoal,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface2,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.borderDark),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 14,
+                                  color: AppColors.textSecondaryDark,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Meta: $goal kcal',
+                                  style: TextStyle(
+                                    fontFamily: AppTypography.fontFamily,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondaryDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -763,10 +779,10 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
                 ),
                 child: InkWell(
                   onTap: () {
-                    if (entries.length == 1) {
+                    // Com a correção, deveria haver apenas 1 entry por tipo/dia
+                    // Se houver mais (dados legados), vai direto para a primeira
+                    if (entries.isNotEmpty) {
                       _showMealOptions(entries.first);
-                    } else if (entries.length > 1) {
-                      _showMealSelectionDialog(entries);
                     }
                   },
                   child: Column(
@@ -800,6 +816,8 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
                                 children: [
                                   Text(
                                     item.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontFamily: AppTypography.fontFamily,
                                       fontSize: 13,

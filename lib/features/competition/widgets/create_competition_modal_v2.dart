@@ -157,7 +157,10 @@ class _CreateCompetitionModalV2State extends State<CreateCompetitionModalV2> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardPadding = mediaQuery.viewInsets.bottom;
+    final systemNavPadding = mediaQuery.viewPadding.bottom;
+    final bottomPadding = keyboardPadding > 0 ? keyboardPadding : systemNavPadding;
 
     return Container(
       decoration: BoxDecoration(

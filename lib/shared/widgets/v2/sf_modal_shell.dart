@@ -55,8 +55,12 @@ class SFModalShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mediaQuery = MediaQuery.of(context);
+    // viewInsets.bottom = teclado, viewPadding.bottom = navigation bar do sistema
+    final keyboardPadding = mediaQuery.viewInsets.bottom;
+    final systemNavPadding = mediaQuery.viewPadding.bottom;
+    final bottomPadding = keyboardPadding > 0 ? keyboardPadding : systemNavPadding;
+    final screenHeight = mediaQuery.size.height;
     final effectiveMaxHeight = maxHeight ?? screenHeight * 0.85;
 
     return Container(

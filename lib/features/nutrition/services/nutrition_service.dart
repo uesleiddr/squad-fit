@@ -178,19 +178,53 @@ class NutritionService {
     dev.log('', name: 'Nutrition');
     dev.log('📊 TOTAIS: $totalCalories kcal | P:${totalProtein.toStringAsFixed(1)}g | C:${totalCarbs.toStringAsFixed(1)}g | F:${totalFat.toStringAsFixed(1)}g', name: 'Nutrition');
 
-    // 3. Salva no Supabase (meal_entry)
-    final entryResponse = await _supabase.from('meal_entries').insert({
-      'user_id': _userId,
-      'meal_type': mealType.name,
-      'description': userInput,
-      'total_calories': totalCalories,
-      'total_protein': totalProtein,
-      'total_carbs': totalCarbs,
-      'total_fat': totalFat,
-      'recorded_at': (recordedAt ?? DateTime.now()).toIso8601String(),
-    }).select().single();
+    // 3. Verifica se já existe uma refeição do mesmo tipo no mesmo dia
+    final targetDate = recordedAt ?? DateTime.now();
+    final existingEntry = await _findExistingMealEntry(mealType, targetDate);
 
-    final entryId = entryResponse['id'] as String;
+    String entryId;
+    Map<String, dynamic> entryResponse;
+
+    if (existingEntry != null) {
+      // Adiciona à refeição existente
+      dev.log('📝 Adicionando à refeição existente: ${existingEntry['id']}', name: 'Nutrition');
+      entryId = existingEntry['id'] as String;
+
+      // Atualiza descrição concatenando
+      final oldDescription = existingEntry['description'] as String? ?? '';
+      final newDescription = oldDescription.isNotEmpty
+          ? '$oldDescription, $userInput'
+          : userInput;
+
+      // Atualiza totais somando aos existentes
+      final newTotalCalories = (existingEntry['total_calories'] as int? ?? 0) + totalCalories;
+      final newTotalProtein = ((existingEntry['total_protein'] ?? 0) as num).toDouble() + totalProtein;
+      final newTotalCarbs = ((existingEntry['total_carbs'] ?? 0) as num).toDouble() + totalCarbs;
+      final newTotalFat = ((existingEntry['total_fat'] ?? 0) as num).toDouble() + totalFat;
+
+      entryResponse = (await _supabase.from('meal_entries').update({
+        'description': newDescription,
+        'total_calories': newTotalCalories,
+        'total_protein': newTotalProtein,
+        'total_carbs': newTotalCarbs,
+        'total_fat': newTotalFat,
+      }).eq('id', entryId).select().single());
+    } else {
+      // Cria nova refeição
+      dev.log('📝 Criando nova refeição', name: 'Nutrition');
+      entryResponse = await _supabase.from('meal_entries').insert({
+        'user_id': _userId,
+        'meal_type': mealType.name,
+        'description': userInput,
+        'total_calories': totalCalories,
+        'total_protein': totalProtein,
+        'total_carbs': totalCarbs,
+        'total_fat': totalFat,
+        'recorded_at': targetDate.toIso8601String(),
+      }).select().single();
+
+      entryId = entryResponse['id'] as String;
+    }
 
     // 4. Salva meal_items
     final itemsToInsert = mealItems.map((item) => {
@@ -205,16 +239,42 @@ class NutritionService {
       'fatsecret_food_id': item.fatsecretFoodId,
     }).toList();
 
-    final itemsResponse = await _supabase
+    await _supabase
         .from('meal_items')
-        .insert(itemsToInsert)
-        .select();
+        .insert(itemsToInsert);
 
-    final savedItems = (itemsResponse as List)
+    // Busca todos os itens da refeição (incluindo os que já existiam)
+    final allItemsResponse = await _supabase
+        .from('meal_items')
+        .select()
+        .eq('meal_entry_id', entryId)
+        .order('created_at', ascending: true);
+
+    final savedItems = (allItemsResponse as List)
         .map((json) => MealItem.fromJson(json))
         .toList();
 
     return MealEntry.fromJson(entryResponse, items: savedItems);
+  }
+
+  /// Busca uma refeição existente do mesmo tipo no mesmo dia
+  Future<Map<String, dynamic>?> _findExistingMealEntry(MealType mealType, DateTime date) async {
+    if (_userId == null) return null;
+
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final response = await _supabase
+        .from('meal_entries')
+        .select()
+        .eq('user_id', _userId!)
+        .eq('meal_type', mealType.name)
+        .gte('recorded_at', startOfDay.toIso8601String())
+        .lt('recorded_at', endOfDay.toIso8601String())
+        .limit(1)
+        .maybeSingle();
+
+    return response;
   }
 
   /// Busca refeições de uma data específica
@@ -299,6 +359,88 @@ class NutritionService {
     }
 
     await _supabase.from('meal_entries').delete().eq('id', entryId);
+  }
+
+  /// Deleta um item específico de uma refeição
+  Future<void> deleteMealItem(String itemId) async {
+    if (_userId == null) {
+      throw AuthException.notAuthenticated;
+    }
+
+    await _supabase.from('meal_items').delete().eq('id', itemId);
+  }
+
+  /// Atualiza a quantidade de um item e recalcula calorias/macros proporcionalmente
+  Future<MealItem> updateMealItemQuantity(MealItem item, double newQuantity) async {
+    if (_userId == null) {
+      throw AuthException.notAuthenticated;
+    }
+
+    final ratio = newQuantity / item.quantity;
+    final newCalories = (item.calories * ratio).round();
+    final newProtein = item.protein * ratio;
+    final newCarbs = item.carbs * ratio;
+    final newFat = item.fat * ratio;
+
+    await _supabase.from('meal_items').update({
+      'quantity': newQuantity,
+      'calories': newCalories,
+      'protein': newProtein,
+      'carbs': newCarbs,
+      'fat': newFat,
+    }).eq('id', item.id);
+
+    return item.copyWith(
+      quantity: newQuantity,
+      calories: newCalories,
+      protein: newProtein,
+      carbs: newCarbs,
+      fat: newFat,
+    );
+  }
+
+  /// Recalcula totais de uma refeição após alterações nos itens
+  Future<void> recalculateMealTotals(String entryId) async {
+    if (_userId == null) {
+      throw AuthException.notAuthenticated;
+    }
+
+    // Busca itens atuais
+    final itemsResponse = await _supabase
+        .from('meal_items')
+        .select()
+        .eq('meal_entry_id', entryId);
+
+    final items = (itemsResponse as List)
+        .map((json) => MealItem.fromJson(json))
+        .toList();
+
+    final totalCalories = items.fold<int>(0, (sum, item) => sum + item.calories);
+    final totalProtein = items.fold<double>(0, (sum, item) => sum + item.protein);
+    final totalCarbs = items.fold<double>(0, (sum, item) => sum + item.carbs);
+    final totalFat = items.fold<double>(0, (sum, item) => sum + item.fat);
+
+    await _supabase.from('meal_entries').update({
+      'total_calories': totalCalories,
+      'total_protein': totalProtein,
+      'total_carbs': totalCarbs,
+      'total_fat': totalFat,
+    }).eq('id', entryId);
+  }
+
+  /// Busca itens de uma refeição específica
+  Future<List<MealItem>> getMealItems(String entryId) async {
+    if (_userId == null) return [];
+
+    final response = await _supabase
+        .from('meal_items')
+        .select()
+        .eq('meal_entry_id', entryId)
+        .order('created_at', ascending: true);
+
+    return (response as List)
+        .map((json) => MealItem.fromJson(json))
+        .toList();
   }
 
   /// Salva uma refeição já estruturada (com itens pré-selecionados)
