@@ -5,7 +5,6 @@ import '../../../core/models/competition_model.dart';
 import '../../../core/services/competition_service.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/snackbar_helper.dart';
-import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
 
 class RankingListV2 extends StatefulWidget {
@@ -36,7 +35,7 @@ class _RankingListV2State extends State<RankingListV2> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return SFCard(
             padding: const EdgeInsets.all(32),
-            child: const LoadingIndicator(),
+            child: const SFLoadingSpinner(size: 48),
           );
         }
 
@@ -74,13 +73,27 @@ class _RankingListV2State extends State<RankingListV2> {
         const SizedBox(height: 12),
 
         // Ranking rows
-        ...rankings.take(5).map((entry) => Padding(
+        ...rankings.take(5).toList().asMap().entries.map((e) {
+          final index = e.key;
+          final entry = e.value;
+          final displayValue = widget.competition!.victoryRule == VictoryRule.percentageLoss
+              ? '${entry.percentageLost >= 0 ? '-' : '+'}${entry.percentageLost.abs().toStringAsFixed(1)}%'
+              : '${entry.weightLost >= 0 ? '-' : '+'}${entry.weightLost.abs().toStringAsFixed(1)}kg';
+
+          return SFAnimatedListItem(
+            index: index,
+            child: Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _RankingRowV2(
-                entry: entry,
-                victoryRule: widget.competition!.victoryRule,
+              child: SFRankingRow(
+                position: entry.position,
+                name: entry.userName,
+                initials: _getInitials(entry.userName),
+                delta: displayValue,
+                isMe: entry.isCurrentUser,
               ),
-            )),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -340,181 +353,11 @@ class _RankingListV2State extends State<RankingListV2> {
   }
 
   Widget _buildEmptyState(String message) {
-    return SFCard(
-      padding: const EdgeInsets.all(32),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.leaderboard_outlined,
-              size: 48,
-              color: AppColors.textTertiaryDark,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                color: AppColors.textSecondaryDark,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return SFEmptyState(
+      icon: Icons.leaderboard_outlined,
+      title: message,
+      useCard: true,
     );
-  }
-}
-
-class _RankingRowV2 extends StatelessWidget {
-  final RankingEntryModel entry;
-  final VictoryRule victoryRule;
-
-  const _RankingRowV2({
-    required this.entry,
-    required this.victoryRule,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final displayValue = victoryRule == VictoryRule.percentageLoss
-        ? '${entry.percentageLost >= 0 ? '-' : '+'}${entry.percentageLost.abs().toStringAsFixed(1)}%'
-        : '${entry.weightLost >= 0 ? '-' : '+'}${entry.weightLost.abs().toStringAsFixed(1)} kg';
-
-    final medal = _getMedalColor(entry.position);
-
-    return SFCard(
-      variant: entry.isCurrentUser ? SFCardVariant.highlight : SFCardVariant.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          // Position badge
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              gradient: medal != null
-                  ? LinearGradient(
-                      colors: [medal, medal.withValues(alpha: 0.6)],
-                    )
-                  : null,
-              color: medal == null ? AppColors.surface2 : null,
-              borderRadius: BorderRadius.circular(10),
-              border: medal == null
-                  ? Border.all(color: AppColors.borderDark)
-                  : null,
-              boxShadow: medal != null
-                  ? [
-                      BoxShadow(
-                        color: medal.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                      )
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: Text(
-                '${entry.position}',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontDisplay,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: medal != null ? AppColors.deep : AppColors.textSecondaryDark,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Avatar
-          SFAvatar(
-            initials: _getInitials(entry.userName),
-            size: 40,
-            gradient: AppGradients.squad,
-          ),
-          const SizedBox(width: 12),
-
-          // Name and subtitle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        entry.userName,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textHighContrast,
-                        ),
-                      ),
-                    ),
-                    if (entry.isCurrentUser) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'VOCÊ',
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Value
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                displayValue,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontDisplay,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: entry.isCurrentUser || entry.position <= 3
-                      ? AppColors.lime
-                      : AppColors.textHighContrast,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color? _getMedalColor(int position) {
-    switch (position) {
-      case 1:
-        return const Color(0xFFFFD166);
-      case 2:
-        return const Color(0xFFD9D9E0);
-      case 3:
-        return const Color(0xFFE09460);
-      default:
-        return null;
-    }
   }
 
   String _getInitials(String name) {

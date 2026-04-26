@@ -8,7 +8,6 @@ import '../../../core/services/deep_link_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
 import '../../home/widgets/ranking_list_v2.dart';
 import '../widgets/create_competition_modal_v2.dart';
@@ -204,9 +203,8 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
     AsyncSnapshot<List<CompetitionModel>> snapshot,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return SFCard(
-        padding: const EdgeInsets.all(40),
-        child: const LoadingIndicator(),
+      return const SFLoadingSpinner(
+        message: 'Carregando...',
       );
     }
 
@@ -276,84 +274,9 @@ class _CompetitionScreenV2State extends State<CompetitionScreenV2> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 60),
-
-        // Icon
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              colors: [
-                AppColors.primary.withValues(alpha: 0.2),
-                Colors.transparent,
-              ],
-            ),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.borderDark),
-              ),
-              child: Icon(
-                Icons.emoji_events_outlined,
-                size: 36,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        Text(
-          'Nenhum desafio ativo',
-          style: TextStyle(
-            fontFamily: AppTypography.fontDisplay,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Crie um novo desafio para competir com seus amigos ou entre usando um código de convite.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 14,
-              color: AppColors.textSecondaryDark,
-              height: 1.5,
-            ),
-          ),
-        ),
-        const SizedBox(height: 32),
-
-        // Buttons
-        SFButton(
-          variant: SFButtonVariant.primary,
-          fullWidth: true,
-          icon: Icons.add,
-          onPressed: () => _showCreateModal(context),
-          child: const Text('Criar Desafio'),
-        ),
-        const SizedBox(height: 12),
-        SFButton(
-          variant: SFButtonVariant.outline,
-          fullWidth: true,
-          icon: Icons.login,
-          onPressed: () => _showJoinModal(context),
-          child: const Text('Entrar com Código'),
-        ),
-      ],
+    return SFEmptyState.noSquad(
+      onCreateSquad: () => _showCreateModal(context),
+      onJoinWithCode: () => _showJoinModal(context),
     );
   }
 

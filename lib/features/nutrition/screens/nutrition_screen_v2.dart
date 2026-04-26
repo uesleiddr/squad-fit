@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
 import '../models/models.dart';
 import '../services/services.dart';
@@ -247,7 +246,7 @@ class _NutritionScreenV2State extends State<NutritionScreenV2> {
       backgroundColor: AppColors.deep,
       body: SafeArea(
         child: _isLoading
-            ? const LoadingIndicator()
+            ? const SFLoadingSpinner(message: 'Carregando...')
             : _error != null
                 ? _buildErrorState()
                 : RefreshIndicator(

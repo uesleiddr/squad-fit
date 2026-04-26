@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/services/user_service.dart';
-import '../../../core/widgets/widgets.dart';
+import '../../../core/theme/design_system.dart';
+import '../../../shared/widgets/v2/v2.dart';
 import '../../navigation/screens/main_navigation_shell.dart';
 import '../../profile/screens/profile_setup_screen.dart';
 import 'login_screen_v2.dart';
@@ -17,8 +18,9 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, snapshot) {
         // Carregando
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: LoadingIndicator(),
+          return Scaffold(
+            backgroundColor: AppColors.deep,
+            body: const SFLoadingSpinner(),
           );
         }
 
@@ -49,8 +51,9 @@ class _ProfileChecker extends StatelessWidget {
       future: userService.getCurrentUser(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: LoadingIndicator(),
+          return Scaffold(
+            backgroundColor: AppColors.deep,
+            body: const SFLoadingSpinner(),
           );
         }
 

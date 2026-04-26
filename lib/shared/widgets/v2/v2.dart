@@ -30,7 +30,6 @@ export 'sf_loading_spinner.dart';
 export 'sf_skeleton_layouts.dart';
 export 'sf_action_sheet.dart';
 export 'sf_animated_list_item.dart';
-export 'sf_streak_card.dart';
 export 'sf_badge.dart';
 export 'sf_logo.dart';
 export 'sf_modal_shell.dart';

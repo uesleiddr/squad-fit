@@ -10,7 +10,6 @@ import '../../../core/services/user_service.dart';
 import '../../../core/services/weight_service.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/snackbar_helper.dart';
-import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
 import '../../nutrition/models/daily_summary.dart';
 import '../../nutrition/screens/nutrition_screen_v2.dart';
@@ -62,7 +61,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> {
           stream: _competitionService.getMyCompetitionsStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const LoadingIndicator();
+              return const SFSkeletonHome();
             }
 
             final competitions = snapshot.data ?? [];

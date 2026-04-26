@@ -265,44 +265,10 @@ class _SettingsScreenV2State extends State<SettingsScreenV2>
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 16, 12),
-      child: Row(
-        children: [
-          // Botão voltar
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => Navigator.pop(context),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: AppColors.textHighContrast,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          // Título
-          Text(
-            'Configurações',
-            style: TextStyle(
-              fontFamily: AppTypography.fontDisplay,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.3,
-            ),
-          ),
-        ],
-      ),
+    return SFAppBar(
+      title: 'Configurações',
+      leading: Icons.arrow_back_rounded,
+      onLeading: () => Navigator.pop(context),
     );
   }
 

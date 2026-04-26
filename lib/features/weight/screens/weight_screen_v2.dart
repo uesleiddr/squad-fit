@@ -7,7 +7,6 @@ import '../../../core/services/weight_service.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/theme/design_system.dart';
-import '../../../core/widgets/widgets.dart';
 import '../../../shared/widgets/v2/v2.dart';
 
 class WeightScreenV2 extends StatefulWidget {
@@ -690,10 +689,7 @@ class _WeightScreenV2State extends State<WeightScreenV2> {
           stream: _weightService.getWeightHistoryStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return SFCard(
-                padding: const EdgeInsets.all(32),
-                child: const LoadingIndicator(),
-              );
+              return const SFLoadingSpinner(message: 'Carregando...');
             }
 
             if (snapshot.hasError) {
