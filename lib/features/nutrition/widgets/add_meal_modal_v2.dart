@@ -71,7 +71,7 @@ class _AddMealModalV2State extends State<AddMealModalV2> {
 
   List<BrazilianFood> _searchResults = [];
   List<_RecentFood> _recentFoods = [];
-  List<_SelectedFoodItem> _selectedItems = []; // Lista de itens selecionados
+  final List<_SelectedFoodItem> _selectedItems = []; // Lista de itens selecionados
 
   // Estado para edição de quantidade (alimento sendo editado)
   BrazilianFood? _editingFood;

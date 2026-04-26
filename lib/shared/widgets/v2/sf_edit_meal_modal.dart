@@ -220,7 +220,7 @@ class _SFEditMealModalState extends State<SFEditMealModal> {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 itemCount: _allItems.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) => _buildItemTile(_allItems[index]),
               ),
             ),

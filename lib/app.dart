@@ -13,7 +13,6 @@ import 'core/utils/invite_code_validator.dart';
 import 'core/utils/snackbar_helper.dart';
 import 'core/widgets/widgets.dart';
 import 'features/auth/screens/auth_wrapper.dart';
-import 'features/home/screens/home_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -85,7 +84,6 @@ class _SquadFitAppState extends State<SquadFitApp> {
       initialRoute: '/',
       routes: {
         '/': (context) => const AuthWrapper(),
-        '/home': (context) => const HomeScreen(),
       },
     );
   }
