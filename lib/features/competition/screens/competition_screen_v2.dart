@@ -11,7 +11,7 @@ import '../../../core/theme/design_system.dart';
 import '../../../shared/widgets/v2/v2.dart';
 import '../../home/widgets/ranking_list_v2.dart';
 import '../widgets/create_competition_modal_v2.dart';
-import '../widgets/edit_competition_modal.dart';
+import '../widgets/edit_competition_modal_v2.dart';
 import '../widgets/join_competition_modal_v2.dart';
 
 class CompetitionScreenV2 extends StatefulWidget {
